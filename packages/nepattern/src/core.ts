@@ -65,11 +65,11 @@ class ValidateResult<TVOrigin> {
     return this.flag == ResultFlag.DEFAULT
   }
 
-  step<T>(other: T ): T;
+  step<T>(other: T | Constructor<T>): T;
   step<T>(other: (_: TVOrigin)=>T): T | ThisType<TVOrigin>;
   step<T>(other: BasePattern<T>): ValidateResult<T | Error>;
-  step<T>(other: ((_: TVOrigin)=> T) | T | any): T | ThisType<TVOrigin> | ValidateResult<T | Error> {
-    if (other instanceof Boolean)
+  step<T>(other: ((_: TVOrigin)=> T) | Constructor<T> | T | any): T | ThisType<TVOrigin> | ValidateResult<T | Error> {
+    if (other == Boolean)
       return this.isSuccess();
     if (other instanceof Function && this.isSuccess())
       return other(this.value)

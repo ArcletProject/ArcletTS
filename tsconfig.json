@@ -3,6 +3,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
+      "nepattern": ["packages/nepattern/src"],
       "arclet": ["packages/arclet/src"],
       "@arcletjs/*": ["packages/*/src"],
     },

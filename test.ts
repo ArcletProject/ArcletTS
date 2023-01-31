@@ -1,4 +1,4 @@
-import {BasePattern, PatternMode} from "./packages/nepattern/src/core";
+import {BasePattern, PatternMode} from "@arcletjs/nepattern/src";
 
 class A {
   name: string
