@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.base",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "arclet": ["packages/arclet/src"],
+      "@arcletjs/*": ["packages/*/src"],
+    },
+  },
+  "files": [],
+}

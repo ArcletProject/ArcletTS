@@ -1,0 +1,34 @@
+{
+  "name": "@arcletjs/alconna",
+  "version": "1.0.0",
+  "description": "A High-performance, Generality, Humane Command Line Arguments Parser Library.",
+  "main": "lib/index.cjs",
+  "module": "lib/index.mjs",
+  "typings": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "author": "RF-Tar-Railt <rf_tar_railt@qq.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ArcletProject/ArcletTS.git",
+    "directory": "packages/alconna"
+  },
+  "bugs": {
+    "url": "https://github.com/ArcletProject/ArcletTS/issues"
+  },
+  "homepage": "https://github.com/ArcletProject/ArcletTS",
+  "keywords": [
+    "command",
+    "argparse",
+    "fast",
+    "alconna",
+    "cli",
+    "command-line",
+    "parsing",
+    "optparse"
+  ],
+  "dependencies": {
+  }
+}

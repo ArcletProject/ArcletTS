@@ -1,0 +1,31 @@
+{
+  "name": "@arcletjs/nepattern",
+  "version": "1.0.0",
+  "description": "Not-Enough-Pattern",
+  "main": "lib/index.cjs",
+  "module": "lib/index.mjs",
+  "typings": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "author": "RF-Tar-Railt <rf_tar_railt@qq.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ArcletProject/ArcletTS.git",
+    "directory": "packages/nepattern"
+  },
+  "bugs": {
+    "url": "https://github.com/ArcletProject/ArcletTS/issues"
+  },
+  "homepage": "https://github.com/ArcletProject/ArcletTS",
+  "keywords": [
+    "pattern",
+    "regex",
+    "validator",
+    "converter"
+  ],
+  "dependencies": {
+    "@types/node": "^18.11.18"
+  }
+}
