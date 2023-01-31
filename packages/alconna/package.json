@@ -30,5 +30,6 @@
     "optparse"
   ],
   "dependencies": {
+    "@arcletjs/nepattern" : ">=1.0.0"
   }
 }
