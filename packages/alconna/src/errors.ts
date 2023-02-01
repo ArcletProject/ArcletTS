@@ -1,7 +1,7 @@
 /**
  * 一个 text 没有被任何参数匹配成功
  */
-class ParamsUnmatched extends Error {
+export class ParamsUnmatched extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ParamsUnmatched";
@@ -11,7 +11,7 @@ class ParamsUnmatched extends Error {
 /**
  *  组件内的 Args 参数未能解析到任何内容
  */
-class ArgumentMissing extends Error {
+export class ArgumentMissing extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ArgumentMissing";
@@ -21,7 +21,7 @@ class ArgumentMissing extends Error {
 /**
  * 构造 alconna 时某个传入的参数不正确
  */
-class InvalidParam extends Error {
+export class InvalidParam extends Error {
   constructor(message: string) {
     super(message);
     this.name = "InvalidParam";
@@ -31,7 +31,7 @@ class InvalidParam extends Error {
 /**
  * 传入了无法解析的消息
  */
-class NullMessage extends Error {
+export class NullMessage extends Error {
   constructor(message: string) {
     super(message);
     this.name = "NullMessage";
@@ -41,7 +41,7 @@ class NullMessage extends Error {
 /**
  * 给出的消息含有不期望的元素
  */
-class UnexpectedElement extends Error {
+export class UnexpectedElement extends Error {
   constructor(message: string) {
     super(message);
     this.name = "UnexpectedElement";
@@ -51,7 +51,7 @@ class UnexpectedElement extends Error {
 /**
  * 执行失败
  */
-class ExecuteFailed extends Error {
+export class ExecuteFailed extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ExecuteFailed";
@@ -62,7 +62,7 @@ class ExecuteFailed extends Error {
 /**
  * 注册的命令数量超过最大长度
  */
-class ExceedMaxCount extends Error {
+export class ExceedMaxCount extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ExceedMaxCount";
@@ -72,7 +72,7 @@ class ExceedMaxCount extends Error {
 /**
  * 行为执行被停止
  */
-class BehaveCancelled extends Error {
+export class BehaveCancelled extends Error {
   constructor(message: string) {
     super(message);
     this.name = "BehaveCancelled";
@@ -82,7 +82,7 @@ class BehaveCancelled extends Error {
 /**
  * 越界行为
  */
-class OutBoundsBehave extends Error {
+export class OutBoundsBehave extends Error {
   constructor(message: string) {
     super(message);
     this.name = "OutBoundsBehave";
@@ -92,7 +92,7 @@ class OutBoundsBehave extends Error {
 /**
  * 模糊匹配成功
  */
-class FuzzyMatchSuccess extends Error {
+export class FuzzyMatchSuccess extends Error {
   constructor(message: string) {
     super(message);
     this.name = "FuzzyMatchSuccess";
@@ -102,7 +102,7 @@ class FuzzyMatchSuccess extends Error {
 /**
  * 补全触发
  */
-class CompletionTriggered extends Error {
+export class CompletionTriggered extends Error {
 
   constructor(message: string) {
     super(message);
@@ -113,7 +113,7 @@ class CompletionTriggered extends Error {
 /**
  * 解析状态保存触发
  */
-class PauseTriggered extends Error {
+export class PauseTriggered extends Error {
   constructor(message: string) {
     super(message);
     this.name = "PauseTriggered";
@@ -123,25 +123,9 @@ class PauseTriggered extends Error {
 /**
  * 内置选项解析触发
  */
-class SpecialOptionTriggered extends Error {
+export class SpecialOptionTriggered extends Error {
   constructor(message: string) {
     super(message);
     this.name = "SpecialOptionTriggered";
   }
-}
-
-export {
-  ParamsUnmatched,
-  ArgumentMissing,
-  InvalidParam,
-  NullMessage,
-  UnexpectedElement,
-  ExecuteFailed,
-  ExceedMaxCount,
-  BehaveCancelled,
-  OutBoundsBehave,
-  FuzzyMatchSuccess,
-  CompletionTriggered,
-  PauseTriggered,
-  SpecialOptionTriggered
 }

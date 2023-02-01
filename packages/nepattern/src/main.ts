@@ -1,36 +1,36 @@
 import { Pattern, PatternMode } from "./core";
 import { AllParam, Ellipsis, Empty, isConstructor } from "./utils";
 import { Regex, Switch, Union } from "./base";
-import * as fs from "fs"
+import * as fs from "node:fs"
 
-const ANY: Pattern<any> = new Pattern(
+export const ANY: Pattern<any> = new Pattern(
   Object, ".+", PatternMode.KEEP, null, "any"
 )
 
-const STRING: Pattern<string> = new Pattern(
-  String, "(.+?)", PatternMode.KEEP, null, "string", null, ["String"]
+export const STRING: Pattern<string> = new Pattern(
+  String, ".+?", PatternMode.KEEP, null, "string", null, ["String"]
 )
 
-const EMAIL: Pattern<string> = new Pattern(
+export const EMAIL: Pattern<string> = new Pattern(
   String, "(?:[\w\.+-]+)@(?:[\w\.-]+)\.(?:[\w\.-]+)", PatternMode.REGEX_MATCH,
   null, "email"
 )
 
-const IP: Pattern<string> = new Pattern(
+export const IP: Pattern<string> = new Pattern(
   String,
   "(?:(?:[01]{0,1}[0-9]{0,1}[0-9]|2[0-4][0-9]|25[0-5])\.){3}(?:[01]{0,1}[0-9]{0,1}[0-9]|2[0-4][0-9]|25[0-5]):?(?:[0-9]+)?",
   PatternMode.REGEX_MATCH,
   null, "ip"
 )
 
-const URL: Pattern<string> = new Pattern(
+export const URL: Pattern<string> = new Pattern(
   String,
   "(?:[\w]+://)?[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?",
   PatternMode.REGEX_MATCH,
   null, "url"
 )
 
-const HEX: Pattern<number> = new Pattern(
+export const HEX: Pattern<number> = new Pattern(
   Number,
   "(?:0x)?[0-9a-fA-F]+",
   PatternMode.REGEX_CONVERT,
@@ -38,7 +38,7 @@ const HEX: Pattern<number> = new Pattern(
   "hex"
 )
 
-const HEX_COLOR: Pattern<string> = new Pattern(
+export const HEX_COLOR: Pattern<string> = new Pattern(
   String,
   "(#[0-9a-fA-F]{6})",
   PatternMode.REGEX_CONVERT,
@@ -46,7 +46,7 @@ const HEX_COLOR: Pattern<string> = new Pattern(
   "color"
 )
 
-const DATE: Pattern<Date> = new Pattern(
+export const DATE: Pattern<Date> = new Pattern(
   Date,
   "",
   PatternMode.TYPE_CONVERT,
@@ -56,7 +56,7 @@ const DATE: Pattern<Date> = new Pattern(
   ["String", "Number"]
 )
 
-const patternMap: Map<any, Pattern<any> | typeof AllParam | typeof Empty> = new Map()
+export const patternMap: Map<any, Pattern<any> | typeof AllParam | typeof Empty> = new Map()
 patternMap.set("any", ANY)
 patternMap.set(Ellipsis, ANY)
 patternMap.set("email", EMAIL)
@@ -69,7 +69,7 @@ patternMap.set("*", AllParam)
 patternMap.set("", Empty)
 patternMap.set("date", DATE)
 
-function set_pattern(
+export function set_pattern(
   target: Pattern<any>,
   alias: string | null = null,
   cover: boolean = true,
@@ -94,7 +94,7 @@ function set_pattern(
   }
 }
 
-function set_patterns(
+export function set_patterns(
   patterns: Iterable<Pattern<any>>,
   cover: boolean = true,
   data: Map<any, any> | null = null
@@ -104,7 +104,7 @@ function set_patterns(
   }
 }
 
-let FILE: Pattern<Buffer> = new Pattern(
+export const FILE: Pattern<Buffer> = new Pattern(
   Buffer,
   "",
   PatternMode.TYPE_CONVERT,
@@ -116,7 +116,7 @@ let FILE: Pattern<Buffer> = new Pattern(
   ["String"]
 )
 
-const INTEGER: Pattern<number> = new Pattern(
+export const INTEGER: Pattern<number> = new Pattern(
   Number,
   "\-?[0-9]+",
   PatternMode.REGEX_CONVERT,
@@ -124,7 +124,7 @@ const INTEGER: Pattern<number> = new Pattern(
   "int"
 )
 
-const NUMBER: Pattern<number> = new Pattern(
+export const NUMBER: Pattern<number> = new Pattern(
   Number,
   "\-?[0-9]+\.?[0-9]*",
   PatternMode.TYPE_CONVERT,
@@ -132,7 +132,7 @@ const NUMBER: Pattern<number> = new Pattern(
   "number",
 )
 
-const BOOL: Pattern<boolean> = new Pattern(
+export const BOOL: Pattern<boolean> = new Pattern(
   Boolean,
   /(?:true|false)/i,
   PatternMode.REGEX_CONVERT,
@@ -140,7 +140,7 @@ const BOOL: Pattern<boolean> = new Pattern(
   "boolean"
 )
 
-const ARRAY: Pattern<any[]> = new Pattern(
+export const ARRAY: Pattern<any[]> = new Pattern(
   Array,
   "\[.+?\]",
   PatternMode.REGEX_CONVERT,
@@ -148,7 +148,7 @@ const ARRAY: Pattern<any[]> = new Pattern(
   "array"
 )
 
-const DICT: Pattern<object> = new Pattern(
+export const DICT: Pattern<object> = new Pattern(
   Object,
   "\{.+?\}",
   PatternMode.REGEX_CONVERT,
@@ -159,7 +159,7 @@ const DICT: Pattern<object> = new Pattern(
 set_patterns([FILE, STRING, INTEGER, NUMBER, BOOL, ARRAY, DICT])
 
 
-function parser(item: any): Pattern<any> | typeof AllParam | typeof Empty {
+export function parser(item: any): Pattern<any> | typeof AllParam | typeof Empty {
   if (item instanceof Pattern || item === AllParam)
     return item
   try {
@@ -169,7 +169,7 @@ function parser(item: any): Pattern<any> | typeof AllParam | typeof Empty {
   catch (e) {
 
   }
-  if (typeof item == "function" && !isConstructor(item)) {
+  if (typeof item === "function" && !isConstructor(item)) {
     return new Pattern(
       Object, "", PatternMode.TYPE_CONVERT,
       (_, x: Parameters<typeof item>) => {
@@ -213,25 +213,4 @@ function parser(item: any): Pattern<any> | typeof AllParam | typeof Empty {
     return Empty
   }
   return (typeof item == "function" && isConstructor(item)) ? Pattern.of(item) : Pattern.on(item)
-}
-
-export {
-  patternMap,
-  parser,
-  set_patterns,
-  set_pattern,
-  ANY,
-  STRING,
-  EMAIL,
-  IP,
-  URL,
-  HEX,
-  HEX_COLOR,
-  DATE,
-  INTEGER,
-  NUMBER,
-  BOOL,
-  FILE,
-  ARRAY,
-  DICT
 }

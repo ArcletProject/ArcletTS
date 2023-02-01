@@ -1,6 +1,6 @@
-import {Ellipsis} from "@arcletjs/nepattern/src";
+import {Ellipsis} from "@arcletjs/nepattern";
 
-class Sentence {
+export class Sentence {
   public name: string;
   public separators: string[];
 
@@ -21,7 +21,7 @@ class Sentence {
   }
 }
 
-class OptionResult {
+export class OptionResult {
   public value: any;
   public args: { [key: string]: any };
 
@@ -38,7 +38,7 @@ class OptionResult {
   }
 }
 
-class SubcommandResult {
+export class SubcommandResult {
   public value: any;
   public args: { [key: string]: any };
   public options: { [key: string]: OptionResult };
@@ -61,7 +61,7 @@ class SubcommandResult {
   }
 }
 
-class HeadResult {
+export class HeadResult {
   public origin: any;
   public result: any;
   public matched: boolean;
@@ -79,5 +79,3 @@ class HeadResult {
     this.groups = groups || {};
   }
 }
-
-export {Sentence, OptionResult, SubcommandResult, HeadResult};

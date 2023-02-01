@@ -54,7 +54,7 @@ class DoubleLinkedList<K, V> {
   }
 }
 
-class LruCache<K, V> {
+export class LruCache<K, V> {
   capacity: number;
   map: Map<K, DoubleLinkedListNode<K, V>>;
   list: DoubleLinkedList<K, V>;

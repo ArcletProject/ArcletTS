@@ -1,4 +1,4 @@
-import { MatchFailed, Empty, Constructor } from "./utils";
+import { MatchFailed, Empty, Constructor, isConstructor } from "./utils";
 
 function _accept(
   input: any,
@@ -71,6 +71,8 @@ class ValidateResult<TVOrigin> {
   step(other: ((_: any) => any) | Constructor<any> | any): any {
     if (other == Boolean)
       return this.isSuccess();
+    if (other instanceof Function && isConstructor(other) && this.isSuccess())
+      return new other(this.value);
     if (other instanceof Function && this.isSuccess())
       return other(this.value)
     if (other instanceof Pattern && this.isSuccess())

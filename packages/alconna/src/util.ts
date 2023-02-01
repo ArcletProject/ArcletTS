@@ -1,4 +1,4 @@
-function splitOnce(command: string, sep: string[] = [" "], crlf: boolean = true): [string, string] {
+export function splitOnce(command: string, sep: string[] = [" "], crlf: boolean = true): [string, string] {
   let result: string[] = [];
   let buffer: string[] = [];
   let quote: string | null = null;
@@ -41,7 +41,7 @@ function splitOnce(command: string, sep: string[] = [" "], crlf: boolean = true)
 }
 
 
-function split(command: string, sep: string[] = [" "], crlf: boolean = true): string[] {
+export function split(command: string, sep: string[] = [" "], crlf: boolean = true): string[] {
   let result: string[] = [];
   let buffer: string[] = [];
   let quote: string | null = null;
@@ -76,7 +76,7 @@ function split(command: string, sep: string[] = [" "], crlf: boolean = true): st
   return result;
 }
 
-function levenshtein_norm(source: string, target: string): number {
+export function levenshtein_norm(source: string, target: string): number {
   let distance = levenshtein(source, target);
   return 1 - distance / Math.max(source.length, target.length);
 }

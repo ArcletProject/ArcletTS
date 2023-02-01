@@ -29,6 +29,11 @@
     "parsing",
     "optparse"
   ],
+  "scripts": {
+    "compile:cjs": "esbuild src/index.ts --outfile=lib/index.cjs --bundle --sourcemap --platform=node --target=es2019",
+    "compile:esm": "esbuild src/index.ts --outfile=lib/index.mjs --bundle --sourcemap --platform=node --target=esnext",
+    "build": "yarn compile:cjs && yarn compile:esm && dtsc"
+  },
   "dependencies": {
     "@arcletjs/nepattern" : ">=1.0.0"
   }

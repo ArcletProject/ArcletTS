@@ -1,15 +1,15 @@
-import {Pattern, AllParam, Constructor, Empty, parser, patternMap, Union, ANY} from "@arcletjs/nepattern/src";
+import {Pattern, AllParam, Empty, parser, patternMap, Union, ANY} from "@arcletjs/nepattern";
 import {InvalidParam, NullMessage} from "./errors";
 import {KeyWordVar, MultiVar} from "./typing";
 import {config} from "./config";
 
-enum ArgFlag {
+export declare enum ArgFlag {
   OPTIONAL = "?",
   HIDDEN = "/",
   ANTI = "!"
 }
 
-class Field<T> {
+export class Field<T> {
   constructor(
     public default_: T = null as any,
     public defaultGetter: (() => T) | null = null,
@@ -37,7 +37,7 @@ class Field<T> {
 
 type TAValue = string | number | boolean | object | Pattern<any> | typeof AllParam;
 
-class Arg<T> {
+export class Arg<T> {
   public name: string;
   public value: TAValue;
   public field: Field<T>;
@@ -106,7 +106,7 @@ class Arg<T> {
   }
 }
 
-class Args {
+export class Args {
   static from(...args: any[]): Args {
     if (args.length < 1) {
       return new Args();
@@ -249,7 +249,7 @@ class Args {
   }
 }
 
-function fromArray(args: Array<[string?, string?, string?]>, custom: { [key: string]: string }) {
+export function fromArray(args: Array<[string?, string?, string?]>, custom: { [key: string]: string }) {
   let _args = new Args();
   for (let arg of args) {
     if (arg.length < 1) {
@@ -286,5 +286,3 @@ function fromArray(args: Array<[string?, string?, string?]>, custom: { [key: str
   }
   return _args;
 }
-
-export {ArgFlag, Field, Arg, Args, fromArray, TAValue}

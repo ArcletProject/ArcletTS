@@ -3,7 +3,7 @@ import {Constructor, Empty, MatchFailed, Ellipsis} from "./utils";
 
 type RegexGroup = { [key: string]: string }
 
-class Regex extends Pattern<RegexGroup | string[]> {
+export class Regex extends Pattern<RegexGroup | string[]> {
   constructor(
     pattern: string,
     alias: string | null = null
@@ -22,18 +22,16 @@ class Regex extends Pattern<RegexGroup | string[]> {
   }
 }
 
-class Union extends Pattern<any> {
+export class Union<T extends any[]> extends Pattern<T extends (infer B | Pattern<infer B>)[] ? B : never> {
   optional: boolean
   for_validate: Array<Pattern<any>>
   for_equal: Array<any>
 
   constructor(
-    base: Iterable<any>,
-    anti: boolean = false
+    ...base: T
   ) {
     super(String, "", PatternMode.KEEP)
     this.optional = false
-    this.anti = anti
     this.for_validate = []
     this.for_equal = []
 
@@ -56,7 +54,7 @@ class Union extends Pattern<any> {
     this.alias = _val_reprs.join("|")
   }
 
-  match(input: any): any {
+  match(input: any): T extends (infer B | Pattern<infer B>)[] ? B : never {
     if (!input) {
       input = null
     }
@@ -76,7 +74,7 @@ class Union extends Pattern<any> {
   }
 }
 
-class Sequence<V, T extends Array<V> | Set<V>> extends Pattern<T> {
+export class Sequence<T extends Array<V> | Set<V>, V> extends Pattern<T> {
   base: Pattern<V>
 
   constructor(
@@ -120,16 +118,14 @@ class Sequence<V, T extends Array<V> | Set<V>> extends Pattern<T> {
   }
 }
 
-type Dict<V> = {
-  [key in (string | number | symbol)]: V;
-};
+type Dict<T, K extends string | number | symbol = string> = { [key in K]: T }
 
-class Mapping<TV> extends Pattern<Dict<TV>> {
-  key: Pattern<string | number | symbol>
+export class Mapping<TV, TK extends string | number | symbol = string> extends Pattern<Dict<TV, TK>> {
+  key: Pattern<TK>
   value: Pattern<TV>
 
   constructor(
-    key: Pattern<string | number | symbol>,
+    key: Pattern<TK>,
     value: Pattern<TV>
   ) {
     super(
@@ -160,7 +156,7 @@ class Mapping<TV> extends Pattern<Dict<TV>> {
     }
   }
 
-  match(input: any): Dict<TV> {
+  match(input: any): Dict<TV, TK> {
     //@ts-ignore
     let res: Dict<TV> | string = super.match(input)
     let success: Array<[string | number | symbol, any]> = []
@@ -181,7 +177,7 @@ class Mapping<TV> extends Pattern<Dict<TV>> {
     for (let item of success) {
       out[item[0]] = item[1]
     }
-    return out
+    return out as Dict<TV, TK>
   }
 
   toString(): string {
@@ -189,7 +185,7 @@ class Mapping<TV> extends Pattern<Dict<TV>> {
   }
 }
 
-class Switch<TS, TC> extends Pattern<TC> {
+export class Switch<TS, TC> extends Pattern<TC> {
   switch: Map<TS | typeof Ellipsis, TC>
 
   constructor(data: Dict<TC>)
@@ -229,5 +225,3 @@ class Switch<TS, TC> extends Pattern<TC> {
     throw new MatchFailed(`参数 ${input} 不正确`)
   }
 }
-
-export {Regex, Mapping, Switch, Sequence, Union, RegexGroup, Dict}

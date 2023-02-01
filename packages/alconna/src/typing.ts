@@ -1,6 +1,6 @@
-import {Pattern, parser, PatternMode} from "@arcletjs/nepattern/src";
+import {Pattern, parser, PatternMode} from "@arcletjs/nepattern";
 
-interface DataCollection<Unit> {
+export interface DataCollection<Unit> {
   get length(): number;
 
   [Symbol.iterator](): Iterator<Unit>;
@@ -8,7 +8,7 @@ interface DataCollection<Unit> {
   toString(): string;
 }
 
-class KeyWordVar<T> extends Pattern<T> {
+export class KeyWordVar<T> extends Pattern<T> {
   base: Pattern<T>;
   sep: string;
 
@@ -24,7 +24,7 @@ class KeyWordVar<T> extends Pattern<T> {
   }
 }
 
-class MultiVar<T> extends Pattern<T> {
+export class MultiVar<T> extends Pattern<T> {
   base: Pattern<T>;
   flag: "+" | "*";
   length: number;
@@ -53,6 +53,3 @@ class MultiVar<T> extends Pattern<T> {
     return this.alias!;
   }
 }
-
-export {KeyWordVar, MultiVar, DataCollection};
-

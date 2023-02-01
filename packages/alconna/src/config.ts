@@ -1,4 +1,4 @@
-import * as fs from "fs"
+import * as fs from "node:fs"
 
 type OptionNames = {
   help: string[],
@@ -6,7 +6,7 @@ type OptionNames = {
   completion: string[],
 }
 
-class Namespace {
+export class Namespace {
   constructor(
     public name: string,
     public headers: Array<string | object> | Array<[object, string]> = [],
@@ -145,11 +145,11 @@ class AlconnaConfig {
   }
 }
 
-const config = new AlconnaConfig();
-let load_lang = config.lang.reload;
+export const config = new AlconnaConfig();
+export const load_lang = config.lang.reload;
 
 
-function withNamespace(name: string | Namespace, callbackFn: (ns: Namespace) => void) {
+export function withNamespace(name: string | Namespace, callbackFn: (ns: Namespace) => void) {
   let ns = name instanceof Namespace ? name : new Namespace(name);
   let nm = ns.name;
   let old = config.default_namespace;
@@ -159,5 +159,3 @@ function withNamespace(name: string | Namespace, callbackFn: (ns: Namespace) => 
   config.namespace[nm] = ns;
   return ns;
 }
-
-export {config, load_lang, withNamespace, Namespace, Lang};
