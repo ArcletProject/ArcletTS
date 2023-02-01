@@ -10,9 +10,9 @@
 ## 简单实例
 
 ```typescript
-import {BasePattern, PatternMode} from "@arcletjs/nepattern/src";
+import {Pattern, PatternMode} from "@arcletjs/nepattern/src";
 
-let pat = BasePattern.of(Number)
+let pat = Pattern.of(Number)
 pat.validate(13).isSuccess()  // true
 pat.validate([13]).step(Boolean) // false
 ```

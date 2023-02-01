@@ -1,15 +1,16 @@
-import {BasePattern, PatternMode} from "./core";
-import {Constructor, Empty, getClassName, MatchFailed, Ellipsis} from "./utils";
+import {Pattern, PatternMode} from "./core";
+import {Constructor, Empty, MatchFailed, Ellipsis} from "./utils";
 
-type RegexGroup = {[key: string]: string}
+type RegexGroup = { [key: string]: string }
 
-class RegexPattern extends BasePattern<RegexGroup | string[]> {
+class Regex extends Pattern<RegexGroup | string[]> {
   constructor(
     pattern: string,
     alias: string | null = null
   ) {
     super(Array, pattern, PatternMode.REGEX_MATCH, null, alias || "regex[:group]");
   }
+
   match(input: any): RegexGroup | string[] {
     if (!(typeof input == "string"))
       throw new MatchFailed(`参数 ${input} 的类型不正确`)
@@ -21,15 +22,15 @@ class RegexPattern extends BasePattern<RegexGroup | string[]> {
   }
 }
 
-class UnionPattern extends BasePattern<any> {
+class Union extends Pattern<any> {
   optional: boolean
-  for_validate: Array<BasePattern<any>>
+  for_validate: Array<Pattern<any>>
   for_equal: Array<any>
 
   constructor(
     base: Iterable<any>,
     anti: boolean = false
-  ){
+  ) {
     super(String, "", PatternMode.KEEP)
     this.optional = false
     this.anti = anti
@@ -40,25 +41,28 @@ class UnionPattern extends BasePattern<any> {
       if (arg == Empty) {
         this.optional = true;
         this.for_equal.push(null);
-      }
-      else if (arg instanceof BasePattern) {
+      } else if (arg instanceof Pattern) {
         this.for_validate.push(arg)
-      }
-      else
+      } else
         this.for_equal.push(arg)
     }
-    let _val_reprs = this.for_validate.map((v) => {return v.toString()})
-    let _eql_reprs = this.for_equal.map((v) => {return `${v}`})
+    let _val_reprs = this.for_validate.map((v) => {
+      return v.toString()
+    })
+    let _eql_reprs = this.for_equal.map((v) => {
+      return `${v}`
+    })
     _val_reprs.push(..._eql_reprs)
     this.alias = _val_reprs.join("|")
   }
+
   match(input: any): any {
     if (!input) {
       input = null
     }
     if (!(input in this.for_equal)) {
       for (let pat of this.for_validate) {
-        let res = pat.exec<any, any>(input)
+        let res = pat.exec<any>(input)
         if (res.isSuccess())
           return res.value
       }
@@ -72,18 +76,18 @@ class UnionPattern extends BasePattern<any> {
   }
 }
 
-class SequencePattern<V, T = Array<V> | Set<V>> extends BasePattern<T> {
-  base: BasePattern<V>
+class Sequence<V, T extends Array<V> | Set<V>> extends Pattern<T> {
+  base: Pattern<V>
+
   constructor(
     form: Constructor<T>,
-    base: BasePattern<V>
+    base: Pattern<V>
   ) {
-    if (getClassName(form) == "Set") {
+    if (form.name == "Set") {
       super(form, "\{(.+?)\}");
       this.base = base
       this.alias = "Set<" + base.toString() + ">"
-    }
-    else {
+    } else {
       super(form, "[(.+?)]");
       this.base = base
       this.alias = "Array<" + base.toString() + ">"
@@ -99,8 +103,7 @@ class SequencePattern<V, T = Array<V> | Set<V>> extends BasePattern<T> {
     for (let s of iter) {
       try {
         success.push(this.base.match(s))
-      }
-      catch (e) {
+      } catch (e) {
         if (e instanceof MatchFailed)
           fail.push(new MatchFailed(`${s} is not matched with ${this.base}`))
         throw e
@@ -113,7 +116,7 @@ class SequencePattern<V, T = Array<V> | Set<V>> extends BasePattern<T> {
   }
 
   toString(): string {
-    return `${getClassName(this.origin)}` + "<" + this.base.toString() + ">"
+    return `${this.origin.name}` + "<" + this.base.toString() + ">"
   }
 }
 
@@ -121,13 +124,13 @@ type Dict<V> = {
   [key in (string | number | symbol)]: V;
 };
 
-class MappingPattern<TV> extends BasePattern<Dict<TV>> {
-  key: BasePattern<string | number | symbol>
-  value: BasePattern<TV>
+class Mapping<TV> extends Pattern<Dict<TV>> {
+  key: Pattern<string | number | symbol>
+  value: Pattern<TV>
 
   constructor(
-    key: BasePattern<string | number | symbol>,
-    value: BasePattern<TV>
+    key: Pattern<string | number | symbol>,
+    value: Pattern<TV>
   ) {
     super(
       Object,
@@ -148,10 +151,9 @@ class MappingPattern<TV> extends BasePattern<Dict<TV>> {
         out.push([kvs[0], kvs[1]])
       }
       return out
-    }
-    else {
+    } else {
       let out: Array<[string, any]> = []
-      for (let val in res){
+      for (let val in res) {
         out.push([val, res[val]])
       }
       return out
@@ -167,8 +169,7 @@ class MappingPattern<TV> extends BasePattern<Dict<TV>> {
     for (let item of this._generate_items(res)) {
       try {
         success.push([this.key.match(item[0]), this.value.match(item[1])])
-      }
-      catch (e) {
+      } catch (e) {
         if (e instanceof MatchFailed)
           fail.push(new MatchFailed(`${item[0]} : ${item[1]} is not matched with ${this.key} : ${this.value}`))
         throw e
@@ -188,16 +189,16 @@ class MappingPattern<TV> extends BasePattern<Dict<TV>> {
   }
 }
 
-class SwitchPattern<TS, TC> extends BasePattern<TC> {
+class Switch<TS, TC> extends Pattern<TC> {
   switch: Map<TS | typeof Ellipsis, TC>
+
   constructor(data: Dict<TC>)
   constructor(data: Map<TS | typeof Ellipsis, TC>)
   constructor(data: Map<TS | typeof Ellipsis, TC> | Dict<TC>) {
     if (data instanceof Map) {
       super((<any>data.values().next().value).constructor, "", PatternMode.TYPE_CONVERT);
       this.switch = data
-    }
-    else {
+    } else {
       let map = new Map()
       for (let key in data) {
         map[key] = data[key]
@@ -229,4 +230,4 @@ class SwitchPattern<TS, TC> extends BasePattern<TC> {
   }
 }
 
-export {RegexPattern, MappingPattern, SwitchPattern, SequencePattern, UnionPattern, RegexGroup, Dict}
+export {Regex, Mapping, Switch, Sequence, Union, RegexGroup, Dict}

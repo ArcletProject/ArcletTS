@@ -1,12 +1,12 @@
-import {getClassName, MatchFailed, Empty, Constructor} from "./utils";
+import { MatchFailed, Empty, Constructor } from "./utils";
 
 function _accept(
   input: any,
-  patterns: BasePattern<any>[] | null = null,
+  patterns: Pattern<any>[] | null = null,
   types: string[] | null = null
 ): boolean {
-  let res_p = patterns ? (patterns.filter((v) => {return v.exec(input).isSuccess()})).length > 0 : false;
-  let res_t = types ? (types.filter((v) => {return getClassName(input.constructor).toLowerCase() == v.toLowerCase()})).length > 0 : false
+  let res_p = patterns ? (patterns.filter((v) => { return v.exec(input).isSuccess() })).length > 0 : false;
+  let res_t = types ? (types.filter((v) => { return input.constructor.name.toLowerCase() == v.toLowerCase() })).length > 0 : false
   return res_p || res_t
 }
 
@@ -47,7 +47,7 @@ class ValidateResult<TVOrigin> {
   }
 
   get error(): Error | null {
-    if (this.flag == ResultFlag.ERROR && this._error != undefined){
+    if (this.flag == ResultFlag.ERROR && this._error != undefined) {
       return this._error;
     }
     return null;
@@ -66,21 +66,21 @@ class ValidateResult<TVOrigin> {
   }
 
   step<T>(other: T | Constructor<T>): T;
-  step<T>(other: (_: TVOrigin)=>T): T | ThisType<TVOrigin>;
-  step<T>(other: BasePattern<T>): ValidateResult<T | Error>;
-  step<T>(other: ((_: TVOrigin)=> T) | Constructor<T> | T | any): T | ThisType<TVOrigin> | ValidateResult<T | Error> {
+  step<T>(other: (_: TVOrigin) => T): T | this;
+  step<T>(other: Pattern<T>): ValidateResult<T | Error>;
+  step(other: ((_: any) => any) | Constructor<any> | any): any {
     if (other == Boolean)
       return this.isSuccess();
     if (other instanceof Function && this.isSuccess())
       return other(this.value)
-    if (other instanceof BasePattern && this.isSuccess())
+    if (other instanceof Pattern && this.isSuccess())
       return other.exec(this.value);
-    if (this.isSuccess()){
+    if (this.isSuccess()) {
       try {
         // @ts-ignore
         return this.value() | other;
       }
-      catch (msg){
+      catch (msg) {
 
       }
     }
@@ -92,47 +92,54 @@ class ValidateResult<TVOrigin> {
   }
 }
 
-class BasePattern<TOrigin> {
+class Pattern<TOrigin> {
   regex: RegExp;
   pattern: string;
   mode: PatternMode;
   origin: Constructor<TOrigin>;
-  converter: (self: BasePattern<TOrigin>, value: any) => TOrigin | null;
+  converter: (self: Pattern<TOrigin>, value: any) => TOrigin | null;
   validators: Array<(res: TOrigin) => boolean>;
 
   anti: boolean;
-  pattern_accepts: BasePattern<any>[];
+  pattern_accepts: Pattern<any>[];
   type_accepts: string[];
   alias: string | null;
-  readonly previous: BasePattern<any> | null;
+  readonly previous: Pattern<any> | null;
 
   constructor(
     origin: Constructor<TOrigin>,
-    pattern: string = "(.+?)",
+    pattern: RegExp | string,
     mode: number | PatternMode = PatternMode.REGEX_MATCH,
-    converter: ((self: BasePattern<TOrigin>, value: any) => TOrigin | null) | null = null,
+    converter: ((self: Pattern<TOrigin>, value: any) => TOrigin | null) | null = null,
     alias: string | null = null,
-    previous: BasePattern<any> | null = null,
-    accepts: Array<string | BasePattern<any>> | null = null,
+    previous: Pattern<any> | null = null,
+    accepts: Array<string | Pattern<any>> | null = null,
     validators: Array<(res: TOrigin) => boolean> | null = null,
     anti: boolean = false
   ) {
-    if (pattern[0] == "^" || pattern[-1] == "$")
-      throw Error(`不允许正则表达式 ${pattern} 头尾部分使用 '^' 或 '$' `)
-    this.pattern = pattern;
-    this.regex = new RegExp(`^${pattern}$`);
+    if (pattern instanceof RegExp) {
+      if (pattern.source.startsWith("^") || pattern.source.endsWith("$"))
+        throw Error(`不允许正则表达式 ${pattern} 头尾部分使用 '^' 或 '$' `)
+      this.pattern = pattern.source;
+      this.regex = new RegExp(`^${pattern.source}$`, pattern.flags);
+    } else {
+      if (pattern.startsWith("^") || pattern.endsWith("$"))
+        throw Error(`不允许正则表达式 ${pattern} 头尾部分使用 '^' 或 '$' `)
+      this.pattern = pattern;
+      this.regex = new RegExp(`^${pattern}$`);
+    }
     this.mode = mode;
     this.origin = origin;
     this.alias = alias;
     this.previous = previous;
     let _accepts = accepts || [];
     //@ts-ignore
-    this.pattern_accepts = _accepts.filter((v) => {return v instanceof BasePattern});
+    this.pattern_accepts = _accepts.filter((v) => { return v instanceof Pattern });
     //@ts-ignore
-    this.type_accepts = _accepts.filter((v) => {return !(v instanceof BasePattern)});
+    this.type_accepts = _accepts.filter((v) => { return !(v instanceof Pattern) });
 
     this.converter = converter || (
-      (_, x) => {return mode == PatternMode.TYPE_CONVERT ? (new origin(x)) : eval(x)}
+      (_, x) => { return mode == PatternMode.TYPE_CONVERT ? (new origin(x)) : eval(x) }
     );
     this.validators = validators || [];
     this.anti = anti;
@@ -140,7 +147,7 @@ class BasePattern<TOrigin> {
 
   acceptsRepr(): string {
     let type_strings = this.type_accepts.copyWithin(this.type_accepts.length, 0);
-    let pat_strings = this.pattern_accepts.map((v) => {return v.toString()})
+    let pat_strings = this.pattern_accepts.map((v) => { return v.toString() })
     type_strings.push(...pat_strings)
     return type_strings.join("|")
   }
@@ -162,46 +169,45 @@ class BasePattern<TOrigin> {
         this.mode == PatternMode.REGEX_CONVERT ||
         (this.type_accepts.length === 0 && this.pattern_accepts.length === 0)
       )
-        text = getClassName(this.origin);
+        text = this.origin.name;
       else
-        text = this.acceptsRepr() + " -> " + getClassName(this.origin);
+        text = this.acceptsRepr() + " -> " + this.origin.name;
     }
-    return `${ this.previous ? this.previous.toString() + ' -> ' : ''}${this.anti ? '!' : ''}${text}`
+    return `${this.previous ? this.previous.toString() + ' -> ' : ''}${this.anti ? '!' : ''}${text}`
   }
 
-  static of<T>(type: Constructor<T>): BasePattern<T> {
-    let name = getClassName(type)
-    return new BasePattern(
+  static of<T>(type: Constructor<T>): Pattern<T> {
+    return new Pattern(
       type,
       "",
       PatternMode.KEEP,
-      (_, x) => {return new type(x)},
-      name,
+      (_, x) => { return new type(x) },
+      type.name,
       null,
-      [name]
+      [type.name]
     )
   }
 
-  static on<T>(obj: T): BasePattern<T> {
-    return new BasePattern(
+  static on<T>(obj: T): Pattern<T> {
+    return new Pattern(
       (<any>obj).constructor,
       "",
       PatternMode.KEEP,
-      (_, x) => {return eval(x)},
+      (_, x) => { return eval(x) },
       String(obj),
       null, null,
-      [(x) => {return x === obj}]
+      [(x) => { return x === obj }]
 
     )
   }
 
-  reverse(): ThisType<TOrigin> {
+  reverse(): this {
     this.anti = !this.anti
     return this
   }
 
   match(input: any): TOrigin {
-    if (this.mode > 0 && getClassName(this.origin) != "String" && input.constructor == this.origin)
+    if (this.mode > 0 && this.origin.name != "String" && input.constructor == this.origin)
       //@ts-ignore
       return input
     if (
@@ -216,9 +222,9 @@ class BasePattern<TOrigin> {
     }
     if (this.mode == PatternMode.KEEP)
       return input
-    if (this.mode == PatternMode.TYPE_CONVERT){
+    if (this.mode == PatternMode.TYPE_CONVERT) {
       let res = this.converter(this, input);
-      if (res == null || (<any>res).constructor !== this.origin){
+      if (res == null || (<any>res).constructor !== this.origin) {
         if (this.previous == null)
           throw new MatchFailed(`参数 ${input} 不正确`)
         res = this.converter(this, this.previous.match(input))
@@ -228,7 +234,7 @@ class BasePattern<TOrigin> {
       //@ts-ignore
       return res
     }
-    if (!(typeof input == "string")){
+    if (!(typeof input == "string")) {
       if (this.previous == null)
         throw new MatchFailed(`参数 ${input} 的类型不正确`)
       input = this.previous.match(input)
@@ -236,7 +242,7 @@ class BasePattern<TOrigin> {
         throw new MatchFailed(`参数 ${input} 的类型不正确`)
     }
     let mat = (<string>input).match(this.regex)
-    if (mat != null){
+    if (mat != null) {
       // @ts-ignore
       return (
         this.mode == PatternMode.REGEX_CONVERT ? this.converter(this, mat.length < 2 ? mat[0] : mat.slice(1)) :
@@ -248,7 +254,7 @@ class BasePattern<TOrigin> {
 
   validate(input: any): ValidateResult<TOrigin>
   validate<TD>(input: any, _default: TD): ValidateResult<TOrigin | TD>
-  validate<TD>(input: any, _default: TD | null = null): ValidateResult<TOrigin | TD> {
+  validate(input: any, _default: any = null): ValidateResult<any> {
     try {
       let res = this.match(input)
       for (let val of this.validators) {
@@ -270,7 +276,7 @@ class BasePattern<TOrigin> {
   }
   invalidate<TI>(input: TI): ValidateResult<TI>
   invalidate<TI, TD>(input: TI, _default: TD): ValidateResult<TD | TI>
-  invalidate<TI, TD>(input: TI, _default: TD | null = null): ValidateResult<TD | TI> {
+  invalidate(input: any, _default: any = null): ValidateResult<any> {
     let res: any
     try {
       res = this.match(input)
@@ -294,15 +300,18 @@ class BasePattern<TOrigin> {
       _default === Empty ? null : _default, ResultFlag.DEFAULT
     )
   }
-  exec<TI, TD>(input: TI, _default?: TD) {
+
+  exec<TI>(input: TI): ValidateResult<TOrigin>
+  exec<TI, TD>(input: TI, _default: TD): ValidateResult<TOrigin | TD>
+  exec(input: any, _default?: any) {
     return this.anti ? this.invalidate(input, _default) : this.validate(input, _default)
   }
 
-  with(name: string): ThisType<TOrigin> {
+  with(name: string): this {
     this.alias = name;
     return this
   }
 }
 
-export {PatternMode, BasePattern, ValidateResult}
+export { PatternMode, Pattern, ValidateResult }
 

@@ -1,62 +1,62 @@
-import {BasePattern, PatternMode} from "./core";
-import {AllParam, Ellipsis, Empty, getClassName} from "./utils";
-import {RegexPattern, SwitchPattern, UnionPattern} from "./base";
+import { Pattern, PatternMode } from "./core";
+import { AllParam, Ellipsis, Empty, isConstructor } from "./utils";
+import { Regex, Switch, Union } from "./base";
 import * as fs from "fs"
 
-const ANY: BasePattern<any> = new BasePattern(
+const ANY: Pattern<any> = new Pattern(
   Object, ".+", PatternMode.KEEP, null, "any"
 )
 
-const STRING: BasePattern<string> = new BasePattern(
+const STRING: Pattern<string> = new Pattern(
   String, "(.+?)", PatternMode.KEEP, null, "string", null, ["String"]
 )
 
-const EMAIL: BasePattern<string> = new BasePattern(
+const EMAIL: Pattern<string> = new Pattern(
   String, "(?:[\w\.+-]+)@(?:[\w\.-]+)\.(?:[\w\.-]+)", PatternMode.REGEX_MATCH,
   null, "email"
 )
 
-const IP: BasePattern<string> = new BasePattern(
+const IP: Pattern<string> = new Pattern(
   String,
   "(?:(?:[01]{0,1}[0-9]{0,1}[0-9]|2[0-4][0-9]|25[0-5])\.){3}(?:[01]{0,1}[0-9]{0,1}[0-9]|2[0-4][0-9]|25[0-5]):?(?:[0-9]+)?",
   PatternMode.REGEX_MATCH,
   null, "ip"
 )
 
-const URL: BasePattern<string> = new BasePattern(
+const URL: Pattern<string> = new Pattern(
   String,
   "(?:[\w]+://)?[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?",
   PatternMode.REGEX_MATCH,
   null, "url"
 )
 
-const HEX: BasePattern<number> = new BasePattern(
+const HEX: Pattern<number> = new Pattern(
   Number,
   "(?:0x)?[0-9a-fA-F]+",
   PatternMode.REGEX_CONVERT,
-  (_, x) => {return eval(`0x${x}`)},
+  (_, x) => { return eval(`0x${x}`) },
   "hex"
 )
 
-const HEX_COLOR: BasePattern<string> = new BasePattern(
+const HEX_COLOR: Pattern<string> = new Pattern(
   String,
   "(#[0-9a-fA-F]{6})",
   PatternMode.REGEX_CONVERT,
-  (_, x) => {return x.substring(1)},
+  (_, x) => { return x.substring(1) },
   "color"
 )
 
-const DATE: BasePattern<Date> = new BasePattern(
+const DATE: Pattern<Date> = new Pattern(
   Date,
   "",
   PatternMode.TYPE_CONVERT,
-  (_, x) => {return new Date(x)},
+  (_, x) => { return new Date(x) },
   "date",
   null,
   ["String", "Number"]
 )
 
-const patternMap: Map<any, BasePattern<any> | typeof AllParam | typeof Empty> = new Map()
+const patternMap: Map<any, Pattern<any> | typeof AllParam | typeof Empty> = new Map()
 patternMap.set("any", ANY)
 patternMap.set(Ellipsis, ANY)
 patternMap.set("email", EMAIL)
@@ -70,13 +70,13 @@ patternMap.set("", Empty)
 patternMap.set("date", DATE)
 
 function set_pattern(
-  target: BasePattern<any>,
+  target: Pattern<any>,
   alias: string | null = null,
   cover: boolean = true,
   data: Map<any, any> | null = null
-){
+) {
   data = data || patternMap
-  for (let k of [alias, target.alias, target.origin, getClassName(target.origin)]) {
+  for (let k of [alias, target.alias, target.origin, target.origin.name]) {
     if (!k)
       continue
     if (!data.has(k) || cover)
@@ -85,26 +85,26 @@ function set_pattern(
       let pat = data.get(k)
       data.set(
         k, (
-          pat instanceof UnionPattern ?
-            new UnionPattern([...pat.for_validate, ...pat.for_equal, target]) :
-            new UnionPattern([pat, target])
-        )
+        pat instanceof Union ?
+          new Union([...pat.for_validate, ...pat.for_equal, target]) :
+          new Union([pat, target])
+      )
       )
     }
   }
 }
 
 function set_patterns(
-  patterns: Iterable<BasePattern<any>>,
+  patterns: Iterable<Pattern<any>>,
   cover: boolean = true,
   data: Map<any, any> | null = null
-){
+) {
   for (let pat of patterns) {
     set_pattern(pat, null, cover, data)
   }
 }
 
-let FILE: BasePattern<Buffer> = new BasePattern(
+let FILE: Pattern<Buffer> = new Pattern(
   Buffer,
   "",
   PatternMode.TYPE_CONVERT,
@@ -116,31 +116,31 @@ let FILE: BasePattern<Buffer> = new BasePattern(
   ["String"]
 )
 
-const INTEGER: BasePattern<number> = new BasePattern(
+const INTEGER: Pattern<number> = new Pattern(
   Number,
   "\-?[0-9]+",
   PatternMode.REGEX_CONVERT,
-  (_, x) => {return Number(x)},
+  (_, x) => { return Number(x) },
   "int"
 )
 
-const NUMBER: BasePattern<number> = new BasePattern(
+const NUMBER: Pattern<number> = new Pattern(
   Number,
   "\-?[0-9]+\.?[0-9]*",
   PatternMode.TYPE_CONVERT,
-  (_, x) => {return Number(x)},
+  (_, x) => { return Number(x) },
   "number",
 )
 
-const BOOL: BasePattern<boolean> = new BasePattern(
+const BOOL: Pattern<boolean> = new Pattern(
   Boolean,
-  "(?:True|False|true|false)",
+  /(?:true|false)/i,
   PatternMode.REGEX_CONVERT,
-  (_, x) => {return x.toLowerCase() === "true"},
+  (_, x) => { return x.toLowerCase() === "true" },
   "boolean"
 )
 
-const ARRAY: BasePattern<any[]> = new BasePattern(
+const ARRAY: Pattern<any[]> = new Pattern(
   Array,
   "\[.+?\]",
   PatternMode.REGEX_CONVERT,
@@ -148,7 +148,7 @@ const ARRAY: BasePattern<any[]> = new BasePattern(
   "array"
 )
 
-const DICT: BasePattern<object> = new BasePattern(
+const DICT: Pattern<object> = new Pattern(
   Object,
   "\{.+?\}",
   PatternMode.REGEX_CONVERT,
@@ -159,8 +159,8 @@ const DICT: BasePattern<object> = new BasePattern(
 set_patterns([FILE, STRING, INTEGER, NUMBER, BOOL, ARRAY, DICT])
 
 
-function parser(item: any): BasePattern<any> | typeof AllParam | typeof Empty {
-  if (item instanceof BasePattern || item === AllParam)
+function parser(item: any): Pattern<any> | typeof AllParam | typeof Empty {
+  if (item instanceof Pattern || item === AllParam)
     return item
   try {
     if (patternMap.has(item))
@@ -169,10 +169,10 @@ function parser(item: any): BasePattern<any> | typeof AllParam | typeof Empty {
   catch (e) {
 
   }
-  if (item instanceof Function){
-    return new BasePattern(
+  if (typeof item == "function" && !isConstructor(item)) {
+    return new Pattern(
       Object, "", PatternMode.TYPE_CONVERT,
-      (_, x) => {
+      (_, x: Parameters<typeof item>) => {
         try {
           return new item(x)
         }
@@ -184,7 +184,7 @@ function parser(item: any): BasePattern<any> | typeof AllParam | typeof Empty {
   }
   if (typeof item == "string") {
     if (item.startsWith("re:")) {
-      return new RegexPattern(item.substring(3))
+      return new Regex(item.substring(3))
     }
     if (item.includes("|")) {
       let out: any[] = []
@@ -193,26 +193,26 @@ function parser(item: any): BasePattern<any> | typeof AllParam | typeof Empty {
           out.push(patternMap.get(name) || name)
         }
       }
-      return new UnionPattern(out)
+      return new Union(out)
     }
-    return new BasePattern(String, item, PatternMode.REGEX_MATCH, null, `'${item}'`)
+    return new Pattern(String, item, PatternMode.REGEX_MATCH, null, `'${item}'`)
   }
   if (item instanceof Array) {
-    return new UnionPattern(
-      item.map((v) => {return patternMap.get(v) || v})
+    return new Union(
+      item.map((v) => { return patternMap.get(v) || v })
     )
   }
   if (typeof item == "object" && "switch" in item && typeof item.switch == "boolean") {
     delete item.switch
-    return new SwitchPattern(item)
+    return new Switch(item)
   }
   if (item instanceof Map) {
-    return new SwitchPattern(item)
+    return new Switch(item)
   }
   if (item == null) {
     return Empty
   }
-  return (typeof item == "function") ? BasePattern.of(item) : BasePattern.on(item)
+  return (typeof item == "function" && isConstructor(item)) ? Pattern.of(item) : Pattern.on(item)
 }
 
 export {

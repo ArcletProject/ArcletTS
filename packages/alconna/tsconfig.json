@@ -6,5 +6,9 @@
   },
   "include": [
     "src",
+    "src/lang/*"
   ],
+  "files": [
+    "src/lang/default.json"
+  ]
 }

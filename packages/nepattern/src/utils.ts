@@ -1,7 +1,7 @@
-const Empty = Symbol("Empty");
-const Ellipsis = Symbol("...")
+const Empty = Symbol.for("Empty");
+const Ellipsis = Symbol.for("...")
 
-const AllParam = Symbol("AllParam");
+const AllParam = Symbol.for("AllParam");
 
 class MatchFailed extends Error {
   constructor(msg) {
@@ -12,13 +12,14 @@ class MatchFailed extends Error {
 
 interface Constructor<T> {
   new(...args): any
-  //(...args): any
   readonly prototype: any
 }
 
-function getClassName(constructor: Function) {
-  let code = constructor.toString();
-  return code.split(' ')[1].split('(')[0]
+function isConstructor(fn: Function): fn is Constructor<any> {
+  return fn.prototype && fn.name && (
+    fn.prototype.constructor.toString().startsWith('class') ||
+    fn.prototype.constructor.toString().includes("[native code]")
+  ) ? true : false
 }
 
-export {AllParam, MatchFailed, Empty, getClassName, Constructor, Ellipsis}
+export { AllParam, MatchFailed, Empty, isConstructor, Constructor, Ellipsis }
