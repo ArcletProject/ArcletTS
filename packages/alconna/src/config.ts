@@ -143,6 +143,17 @@ class AlconnaConfig {
       this._default_namespace = ns.name;
     }
   }
+
+  setdefault(name: string, default_: Namespace) {
+    if (!(name in this.namespace)) {
+      this.namespace[name] = default_;
+      return default_;
+    } else {
+      return this.namespace[name];
+    }
+  }
+
+
 }
 
 export const config = new AlconnaConfig();

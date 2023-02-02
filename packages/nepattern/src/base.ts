@@ -3,7 +3,7 @@ import {Constructor, Empty, MatchFailed, Ellipsis} from "./utils";
 
 type RegexGroup = { [key: string]: string }
 
-export class Regex extends Pattern<RegexGroup | string[]> {
+export class Regex extends Pattern<RegexGroup | string[], string> {
   constructor(
     pattern: string,
     alias: string | null = null
@@ -22,7 +22,7 @@ export class Regex extends Pattern<RegexGroup | string[]> {
   }
 }
 
-export class Union<T extends any[]> extends Pattern<T extends (infer B | Pattern<infer B>)[] ? B : never> {
+export class Union<T extends any[]> extends Pattern<T extends (infer B | Pattern<infer B>)[] ? B extends typeof Empty ? never : B : never> {
   optional: boolean
   for_validate: Array<Pattern<any>>
   for_equal: Array<any>
@@ -54,7 +54,7 @@ export class Union<T extends any[]> extends Pattern<T extends (infer B | Pattern
     this.alias = _val_reprs.join("|")
   }
 
-  match(input: any): T extends (infer B | Pattern<infer B>)[] ? B : never {
+  match(input: any): T extends (infer B | Pattern<infer B>)[] ? B extends typeof Empty ? never : B : never {
     if (!input) {
       input = null
     }
@@ -118,7 +118,7 @@ export class Sequence<T extends Array<V> | Set<V>, V> extends Pattern<T> {
   }
 }
 
-type Dict<T, K extends string | number | symbol = string> = { [key in K]: T }
+type Dict<T = any, K extends string | number | symbol = string> = { [key in K]: T }
 
 export class Mapping<TV, TK extends string | number | symbol = string> extends Pattern<Dict<TV, TK>> {
   key: Pattern<TK>
@@ -185,19 +185,19 @@ export class Mapping<TV, TK extends string | number | symbol = string> extends P
   }
 }
 
-export class Switch<TS, TC> extends Pattern<TC> {
-  switch: Map<TS | typeof Ellipsis, TC>
+export class Switch<TC, TS extends string | number | typeof Ellipsis> extends Pattern<TC, TS> {
+  switch: Map<TS, TC>
 
-  constructor(data: Dict<TC>)
-  constructor(data: Map<TS | typeof Ellipsis, TC>)
-  constructor(data: Map<TS | typeof Ellipsis, TC> | Dict<TC>) {
+  constructor(data: Dict<TC, TS>)
+  constructor(data: Map<TS, TC>)
+  constructor(data: Map<TS, TC> | Dict<TC, TS>) {
     if (data instanceof Map) {
       super((<any>data.values().next().value).constructor, "", PatternMode.TYPE_CONVERT);
       this.switch = data
     } else {
       let map = new Map()
       for (let key in data) {
-        map[key] = data[key]
+        map[key as any] = data[key]
       }
       super((<any>map.values().next().value).constructor, "", PatternMode.TYPE_CONVERT);
       this.switch = map
@@ -208,19 +208,19 @@ export class Switch<TS, TC> extends Pattern<TC> {
     let res: string = ""
     for (let k of this.switch.keys()) {
       if (k !== Ellipsis)
-        res += `${k}|`
+        res += `${k as any}|`
     }
     if (res.endsWith("|"))
       res = res.substring(0, res.lastIndexOf("|") - 1)
     return res
   }
 
-  match(input: TS): TC {
+  match(input: TS extends typeof Ellipsis ? any : TS): TC {
     if (this.switch.has(input)) {
       return this.switch.get(input)!
     }
-    if (this.switch.has(Ellipsis)) {
-      return this.switch.get(Ellipsis)!
+    if (this.switch.has(Ellipsis as any)) {
+      return this.switch.get(Ellipsis as any)!
     }
     throw new MatchFailed(`参数 ${input} 不正确`)
   }

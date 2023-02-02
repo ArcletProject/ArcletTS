@@ -7,46 +7,46 @@ export const ANY: Pattern<any> = new Pattern(
   Object, ".+", PatternMode.KEEP, null, "any"
 )
 
-export const STRING: Pattern<string> = new Pattern(
+export const STRING: Pattern<string, string> = new Pattern(
   String, ".+?", PatternMode.KEEP, null, "string", null, ["String"]
 )
 
-export const EMAIL: Pattern<string> = new Pattern(
+export const EMAIL: Pattern<string, string> = new Pattern(
   String, "(?:[\w\.+-]+)@(?:[\w\.-]+)\.(?:[\w\.-]+)", PatternMode.REGEX_MATCH,
   null, "email"
 )
 
-export const IP: Pattern<string> = new Pattern(
+export const IP: Pattern<string, string> = new Pattern(
   String,
   "(?:(?:[01]{0,1}[0-9]{0,1}[0-9]|2[0-4][0-9]|25[0-5])\.){3}(?:[01]{0,1}[0-9]{0,1}[0-9]|2[0-4][0-9]|25[0-5]):?(?:[0-9]+)?",
   PatternMode.REGEX_MATCH,
   null, "ip"
 )
 
-export const URL: Pattern<string> = new Pattern(
+export const URL: Pattern<string, string> = new Pattern(
   String,
   "(?:[\w]+://)?[^/\s?#]+[^\s?#]+(?:\?[^\s#]*)?(?:#[^\s]*)?",
   PatternMode.REGEX_MATCH,
   null, "url"
 )
 
-export const HEX: Pattern<number> = new Pattern(
+export const HEX: Pattern<number, string> = new Pattern(
   Number,
   "(?:0x)?[0-9a-fA-F]+",
   PatternMode.REGEX_CONVERT,
-  (_, x) => { return eval(`0x${x}`) },
+  (_, x: string): number => { return eval(`0x${x}`) },
   "hex"
 )
 
-export const HEX_COLOR: Pattern<string> = new Pattern(
+export const HEX_COLOR: Pattern<string, string> = new Pattern(
   String,
   "(#[0-9a-fA-F]{6})",
   PatternMode.REGEX_CONVERT,
-  (_, x) => { return x.substring(1) },
+  (_, x: string) => { return x.substring(1) },
   "color"
 )
 
-export const DATE: Pattern<Date> = new Pattern(
+export const DATE: Pattern<Date, string | number | Date> = new Pattern(
   Date,
   "",
   PatternMode.TYPE_CONVERT,
@@ -104,16 +104,16 @@ export function set_patterns(
   }
 }
 
-export const FILE: Pattern<Buffer> = new Pattern(
+export const FILE: Pattern<Buffer, fs.PathLike> = new Pattern(
   Buffer,
   "",
   PatternMode.TYPE_CONVERT,
-  (_, x) => {
+  (_, x: fs.PathLike) => {
     return fs.existsSync(x) ? fs.readFileSync(x) : null
   },
   "file",
   null,
-  ["String"]
+  ["String", "Buffer", "URL"]
 )
 
 export const INTEGER: Pattern<number> = new Pattern(
@@ -132,7 +132,7 @@ export const NUMBER: Pattern<number> = new Pattern(
   "number",
 )
 
-export const BOOL: Pattern<boolean> = new Pattern(
+export const BOOL: Pattern<boolean, string> = new Pattern(
   Boolean,
   /(?:true|false)/i,
   PatternMode.REGEX_CONVERT,

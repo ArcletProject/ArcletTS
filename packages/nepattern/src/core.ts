@@ -94,12 +94,12 @@ class ValidateResult<TVOrigin> {
   }
 }
 
-class Pattern<TOrigin> {
+class Pattern<TOrigin, TSource = any> {
   regex: RegExp;
   pattern: string;
   mode: PatternMode;
   origin: Constructor<TOrigin>;
-  converter: (self: Pattern<TOrigin>, value: any) => TOrigin | null;
+  converter: (self: this, value: any) => TOrigin | null;
   validators: Array<(res: TOrigin) => boolean>;
 
   anti: boolean;
@@ -112,7 +112,7 @@ class Pattern<TOrigin> {
     origin: Constructor<TOrigin>,
     pattern: RegExp | string,
     mode: number | PatternMode = PatternMode.REGEX_MATCH,
-    converter: ((self: Pattern<TOrigin>, value: any) => TOrigin | null) | null = null,
+    converter: ((self: Pattern<TOrigin, TSource>, value: any) => TOrigin | null) | null = null,
     alias: string | null = null,
     previous: Pattern<any> | null = null,
     accepts: Array<string | Pattern<any>> | null = null,
@@ -178,8 +178,8 @@ class Pattern<TOrigin> {
     return `${this.previous ? this.previous.toString() + ' -> ' : ''}${this.anti ? '!' : ''}${text}`
   }
 
-  static of<T>(type: Constructor<T>): Pattern<T> {
-    return new Pattern(
+  static of<T>(type: Constructor<T>): Pattern<T, T> {
+    return new Pattern<T, T>(
       type,
       "",
       PatternMode.KEEP,
@@ -190,8 +190,8 @@ class Pattern<TOrigin> {
     )
   }
 
-  static on<T>(obj: T): Pattern<T> {
-    return new Pattern(
+  static on<T>(obj: T): Pattern<T, T> {
+    return new Pattern<T, T>(
       (<any>obj).constructor,
       "",
       PatternMode.KEEP,
@@ -199,7 +199,6 @@ class Pattern<TOrigin> {
       String(obj),
       null, null,
       [(x) => { return x === obj }]
-
     )
   }
 
@@ -208,8 +207,8 @@ class Pattern<TOrigin> {
     return this
   }
 
-  match(input: any): TOrigin {
-    if (this.mode > 0 && this.origin.name != "String" && input.constructor == this.origin)
+  match(input: TSource): TOrigin {
+    if (this.mode > 0 && this.origin.name != "String" && (<any>input).constructor == this.origin)
       //@ts-ignore
       return input
     if (
@@ -223,7 +222,7 @@ class Pattern<TOrigin> {
         throw new MatchFailed(`参数 ${input} 的类型不正确`)
     }
     if (this.mode == PatternMode.KEEP)
-      return input
+      return <TOrigin><unknown>input;
     if (this.mode == PatternMode.TYPE_CONVERT) {
       let res = this.converter(this, input);
       if (res == null || (<any>res).constructor !== this.origin) {
@@ -233,8 +232,7 @@ class Pattern<TOrigin> {
         if ((<any>res).constructor !== this.origin)
           throw new MatchFailed(`参数 ${input} 不正确`)
       }
-      //@ts-ignore
-      return res
+      return res as TOrigin;
     }
     if (!(typeof input == "string")) {
       if (this.previous == null)

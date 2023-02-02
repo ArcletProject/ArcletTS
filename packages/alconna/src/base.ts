@@ -1,15 +1,65 @@
+import {isPromise} from "node:util/types";
 import {Args, fromArray} from "./args";
 import { InvalidParam } from "./errors";
 import {config} from "./config";
 
 type Dict = { [key: string]: any };
 
+export class Action {
+  static ensure(action: Action | ((data: Dict) => void)): Action {
+    if (action instanceof Action) {
+      return action;
+    }
+    return new Action(action);
+  }
+
+  constructor(
+    public fn: (...args: any[]) => any,
+  ) {
+    this.fn = fn;
+  }
+
+  exec(
+    params: Dict,
+    varargs: any[] | null = null,
+    kwargs: Dict | null = null,
+    raise: boolean = false,
+  ): any {
+    let vars: any[] = [];
+    for (let key in params) {
+      vars.push(params[key]);
+    }
+    vars.push(...(varargs || []));
+    if (kwargs) {
+      for (let key in kwargs) {
+        vars.push(kwargs[key]);
+      }
+    }
+    try {
+      let out = this.fn(...vars);
+      if (isPromise(out)) {
+        out = out.then((x) => x);
+      }
+      if (!out || !(out instanceof Object)) {
+        return params;
+      }
+      return out as Dict;
+    } catch (e) {
+      if (raise) {
+        throw e;
+      }
+      return params;
+    }
+  }
+}
+
+
 export class CommandNode {
   name: string;
   _dest: string;
   args: Args;
   separators: string[];
-  _action: (data: Dict) => void;
+  _action: Action;
   help_text: string;
   requires: string[];
   nargs: number;
@@ -19,7 +69,7 @@ export class CommandNode {
     name: string,
     args: Args | string | null = null,
     dest: string | null = null,
-    action: ((data: Dict) => void) | null = null,
+    action: ((data: Dict) => void) | Action | null = null,
     separators: string | Iterable<string> = [" "],
     help: string | null = null,
     requires: string[] | Set<string> = [],
@@ -27,7 +77,7 @@ export class CommandNode {
     if (!name.trim()) {
       throw new InvalidParam(config.lang.require("node.name_empty"));
     }
-    let mat = name.match(/^[`~!@#$%^&*()_+=\[\]{}|;:'",<\.>/?]+.*$/);
+    let mat = name.match(/^[`~!@#$%^&*()_+=\[\]{}|;:'",<.>/?]+.*$/);
     if (mat) {
       throw new InvalidParam(config.lang.require("node.name_error"));
     }
@@ -39,7 +89,7 @@ export class CommandNode {
       args.split(/\s*[,，]\s*/).map((x) => x.split(/\s*[:：=]\s*/) as [string?, string?, string?]),
       {}
     )) : new Args();
-    this._action = action || ((_) => { });
+    this._action = Action.ensure(action || (() => {}));
     this.separators = typeof separators == "string" ? [separators] : Array.from(separators);
     this.nargs = this.args.length;
     this.is_compact = this.separators.length == 1 && this.separators[0] == "";
@@ -60,7 +110,7 @@ export class CommandNode {
   }
 
   action(fn: (data: Dict) => void): this {
-    this._action = fn;
+    this._action = Action.ensure(fn);
     return this
   }
 }
@@ -74,7 +124,7 @@ export class Option extends CommandNode {
     args: Args | string | null = null,
     aliases: string[] = [],
     dest: string | null = null,
-    action: ((data: Dict) => void) | null = null,
+    action: ((data: Dict) => void) | Action | null = null,
     separators: string | Iterable<string> = [" "],
     help: string | null = null,
     requires: string[] | Set<string> = [],
@@ -114,7 +164,7 @@ export class Subcommand extends CommandNode {
     args: Args | string | null = null,
     options: Array<Option | Subcommand> = [],
     dest: string | null = null,
-    action: ((data: Dict) => void) | null = null,
+    action: ((data: Dict) => void) | Action | null = null,
     separators: string | Iterable<string> = [" "],
     help: string | null = null,
     requires: string[] | Set<string> = [],
@@ -128,6 +178,10 @@ export class Subcommand extends CommandNode {
   }
   subcommand(arg: Subcommand):this {
     this._options.push(arg);
+    return this;
+  }
+  push(...args: Array<Option | Subcommand>): this {
+    this._options.push(...args);
     return this;
   }
 }

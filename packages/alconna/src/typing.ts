@@ -1,6 +1,6 @@
 import {Pattern, parser, PatternMode} from "@arcletjs/nepattern";
 
-export interface DataCollection<Unit> {
+export interface DataCollection<Unit = string> {
   get length(): number;
 
   [Symbol.iterator](): Iterator<Unit>;
