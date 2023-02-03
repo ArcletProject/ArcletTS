@@ -10,6 +10,9 @@ export class MatchFailed extends Error {
   }
 }
 
+export type Dict<V = any, K extends string | number | symbol = string> = { [key in K]: V }
+
+
 export interface Constructor<T> {
   new(...args): any
   readonly prototype: any

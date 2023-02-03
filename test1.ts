@@ -1,10 +1,9 @@
 import {Command, Option, Subcommand, Args} from "@arcletjs/alconna/src";
 
 let alc = new Command("echo", null, Args.from("foo", Number))
-  .option(new Option("--bar"))
+  .option("--bar")
   .subcommand(
-    new Subcommand("baz")
-      .option(new Option("--qux"))
+    new Subcommand("baz").option("--qux")
   )
-  .meta({"description": "aaa"})
+  .meta({description: "aaa"})
 

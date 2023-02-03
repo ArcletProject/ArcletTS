@@ -12,7 +12,7 @@ export class Namespace {
     public headers: Array<string | object> | Array<[object, string]> = [],
     public separators: string[] = [" "],
     public behaviors: any[] = [],
-    public formatter_type: (() => any) | null = null,
+    public formatter_type: ((cmd: any) => any) | null = null,
     public fuzzy_match: boolean = false,
     public raise_error: boolean = false,
     public option_name: OptionNames = {

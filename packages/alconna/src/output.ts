@@ -1,6 +1,5 @@
 import {Action} from "./base";
-
-type Dict = { [key: string]: any };
+import { Dict } from "@arcletjs/nepattern";
 
 class OutputAction extends Action {
   generator: () => string;

@@ -7,19 +7,19 @@ type Header = Array<string | object> | Array<[object, string]>
 
 export interface TCommandMeta {
   description: string,
-  usage?: string,
-  examples?: string[],
-  author?: string | null,
-  fuzzy_match?: boolean,
-  raise_error?: boolean,
-  hide?: boolean,
-  keep_crlf?: boolean,
+  usage: string | null,
+  examples: string[],
+  author: string | null,
+  fuzzy_match: boolean,
+  raise_error: boolean,
+  hide: boolean,
+  keep_crlf: boolean,
 }
 
 export class CommandMeta implements TCommandMeta {
   constructor(
     public description: string = "Untitled",
-    public usage?: string,
+    public usage: string | null = null,
     public examples: string[] = [],
     public author: string | null = null,
     public fuzzy_match: boolean = false,
@@ -85,8 +85,14 @@ export class Command extends Subcommand {
     this.name = `${this.command || this.headers[0]}`.replace("ALCONNA:", "");
   }
 
+  meta(data: CommandMeta): this
+  meta(data: Partial<TCommandMeta>): this
   meta(data: TCommandMeta): this {
-    this._meta = data;
+    if (data instanceof CommandMeta) {
+      this._meta = data;
+    } else {
+      Object.assign(this._meta, data);
+    }
     return this;
   }
 
@@ -98,14 +104,22 @@ export class Command extends Subcommand {
     return config.namespace[this.namespace];
   }
 
-  option(arg: Option): this {
-    this._options.splice(this._options.length - 3, 0, arg);
+  option(...args: ConstructorParameters<typeof Option>): this
+  option(args: Option): this
+  option(...args: any[]): this {
+    let opt = (args[0] instanceof Option) ? args[0] : new Option(...args as ConstructorParameters<typeof Option>);
+    this._options.splice(this._options.length - 3, 0, opt);
     return this;
   }
-  subcommand(arg: Subcommand):this {
-    this._options.splice(this._options.length - 3, 0, arg);
+
+  subcommand(...args: ConstructorParameters<typeof Subcommand>): this
+  subcommand(args: Subcommand): this
+  subcommand(...args: any[]): this {
+    let sub = (args[0] instanceof Subcommand) ? args[0] : new Subcommand(...args as ConstructorParameters<typeof Subcommand>);
+    this._options.splice(this._options.length - 3, 0, sub);
     return this;
   }
+
   push(...args: (Option | Subcommand)[]): this {
     this._options.splice(this._options.length - 3, 0, ...args);
     return this;

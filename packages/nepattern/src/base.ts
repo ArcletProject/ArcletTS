@@ -1,5 +1,5 @@
 import {Pattern, PatternMode} from "./core";
-import {Constructor, Empty, MatchFailed, Ellipsis} from "./utils";
+import {Constructor, Empty, MatchFailed, Ellipsis, Dict} from "./utils";
 
 type RegexGroup = { [key: string]: string }
 
@@ -118,7 +118,6 @@ export class Sequence<T extends Array<V> | Set<V>, V> extends Pattern<T> {
   }
 }
 
-type Dict<T = any, K extends string | number | symbol = string> = { [key in K]: T }
 
 export class Mapping<TV, TK extends string | number | symbol = string> extends Pattern<Dict<TV, TK>> {
   key: Pattern<TK>

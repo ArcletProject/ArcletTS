@@ -2,8 +2,7 @@ import {isPromise} from "node:util/types";
 import {Args, fromArray} from "./args";
 import { InvalidParam } from "./errors";
 import {config} from "./config";
-
-type Dict = { [key: string]: any };
+import { Dict } from "@arcletjs/nepattern";
 
 export class Action {
   static ensure(action: Action | ((data: Dict) => void)): Action {
@@ -104,6 +103,11 @@ export class CommandNode {
     return this._dest + this.args.empty ? "" : `(args=${this.args.toString()})`;
   }
 
+  require(...args: string[]): this {
+    this.requires.push(...args);
+    return this;
+  }
+
   help(text: string): this {
     this.help_text = text;
     return this;
@@ -172,14 +176,29 @@ export class Subcommand extends CommandNode {
     super(name, args, dest, action, separators, help, requires);
     this._options = options;
   }
-  option(arg: Option): this {
-    this._options.push(arg);
+
+  option(...args: ConstructorParameters<typeof Option>): this
+  option(args: Option): this
+  option(...args: any[]): this {
+    if (args[0] instanceof Option) {
+      this._options.push(args[0]);
+      return this;
+    }
+    this._options.push(new Option(...args as ConstructorParameters<typeof Option>));
     return this;
   }
-  subcommand(arg: Subcommand):this {
-    this._options.push(arg);
+  subcommand(...args: ConstructorParameters<typeof Subcommand>): this
+  subcommand(args: Subcommand): this
+  subcommand(...args: any[]): this {
+    if (args[0] instanceof Subcommand) {
+      this._options.push(args[0]);
+      return this;
+    }
+    this._options.push(new Subcommand(...args as ConstructorParameters<typeof Subcommand>));
     return this;
   }
+
+
   push(...args: Array<Option | Subcommand>): this {
     this._options.push(...args);
     return this;
