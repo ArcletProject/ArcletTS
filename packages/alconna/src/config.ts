@@ -11,8 +11,8 @@ export class Namespace {
     public name: string,
     public headers: Array<string | object> | Array<[object, string]> = [],
     public separators: string[] = [" "],
-    public behaviors: any[] = [],
-    public formatter_type: ((cmd: any) => any) | null = null,
+    //public behaviors: any[] = [],
+    public formatter_gen: ((cmd: Command) => TextFormatter) | null = null,
     public fuzzy_match: boolean = false,
     public raise_error: boolean = false,
     public option_name: OptionNames = {
@@ -24,8 +24,8 @@ export class Namespace {
     this.name = name;
     this.headers = headers;
     this.separators = separators;
-    this.behaviors = behaviors;
-    this.formatter_type = formatter_type;
+    //this.behaviors = behaviors;
+    this.formatter_gen = formatter_gen;
     this.fuzzy_match = fuzzy_match;
     this.raise_error = raise_error;
     this.option_name = option_name;
@@ -36,13 +36,13 @@ export class Namespace {
   }
 
   toString(): string {
-    return `Namespace(${this.name}, ${this.headers}, ${this.separators}, ${this.formatter_type}, ${this.fuzzy_match}, ${this.raise_error}, ${this.option_name})`;
+    return `Namespace(${this.name}, ${this.headers}, ${this.separators}, ${this.fuzzy_match}, ${this.raise_error}, ${this.option_name})`;
   }
 }
 
 
 class Lang {
-  public path = `${__dirname}/lang/default.json`;
+  public path = `${__dirname}/../lang/default.json`;
   private file: object;
   private config: { [key: string]: string };
 
@@ -170,3 +170,6 @@ export function withNamespace(name: string | Namespace, callbackFn: (ns: Namespa
   config.namespace[nm] = ns;
   return ns;
 }
+
+import { Command } from "./core";
+import { TextFormatter } from "./formatter";

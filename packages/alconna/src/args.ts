@@ -3,7 +3,7 @@ import {InvalidParam, NullMessage} from "./errors";
 import {KeyWordVar, MultiVar} from "./typing";
 import {config} from "./config";
 
-export declare enum ArgFlag {
+export enum ArgFlag {
   OPTIONAL = "?",
   HIDDEN = "/",
   ANTI = "!"
@@ -107,14 +107,16 @@ export class Arg<T> {
 }
 
 export class Args {
-  static from(...args: any[]): Args {
+  static push(...args: Arg<any>[]): Args
+  static push(...args: ConstructorParameters<typeof Arg>): Args
+  static push(...args: any[]): Args {
     if (args.length < 1) {
       return new Args();
     }
-    if (args.length == 1 && args[0] instanceof Arg) {
-      return new Args(...args);
+    if (args[0] instanceof Arg) {
+      return new Args(...args as Arg<any>[]);
     }
-    return new Args(new Arg(...(args as [string, TAValue, Field<any> | any, string | Iterable<string>, string | null, ArgFlag[]])));
+    return new Args(new Arg(...args as ConstructorParameters<typeof Arg>));
   }
 
   argument: Arg<any>[];
@@ -212,14 +214,16 @@ export class Args {
     return this.argument.length;
   }
 
-  from(...args: any[]): this {
+  push(...args: Arg<any>[]): this
+  push(...args: ConstructorParameters<typeof Arg>): this
+  push(...args: any[]): this {
     if (args.length < 1) {
       return this;
     }
-    if (args.length == 1 && args[0] instanceof Arg) {
-      this.argument.push(...args);
+    if (args[0] instanceof Arg) {
+      this.argument.push(...args as Arg<any>[]);
     } else {
-      this.argument.push(new Arg(...(args as [string, TAValue, Field<any> | any, string | Iterable<string>, string | null, ArgFlag[]])));
+      this.argument.push(new Arg(...(args as ConstructorParameters<typeof Arg>)));
     }
     this._parse();
     return this;
@@ -233,7 +237,7 @@ export class Args {
       this.argument.push(other);
       this._parse();
     } else if (other instanceof Array) {
-      this.from(...other);
+      this.push(...other);
     }
     return this;
   }

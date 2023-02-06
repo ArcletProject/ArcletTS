@@ -100,3 +100,16 @@ function levenshtein(source: string, target: string): number {
   }
   return matrix[source.length][target.length];
 }
+
+export function format(text: string, ...args: any[]): string {
+  let i = 0;
+  return text.replace(`{${i}}`, () => {
+    return args[i++];
+  });
+}
+
+export function formatKeys(text: string, keys: { [key: string]: any }): string {
+  return text.replace(/\{([^\}]+)\}/g, (match, key) => {
+    return keys[key];
+  });
+}

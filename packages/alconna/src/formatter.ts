@@ -140,7 +140,7 @@ export class TextFormatter {
           }
         }
         return this.entry(new Trace(
-          {name: _parts[-1], header: [], description: _parts[-1]},
+          {name: _parts.at(-1)!, header: [], description: _parts.at(-1)!},
           new Args(),
           this.data.separators,
           _opts
@@ -225,7 +225,7 @@ export class TextFormatter {
   part(node: Option | Subcommand): string {
     if (node instanceof Subcommand) {
       let name = node.requires.join(" ") + (node.requires.length > 0 ? " " : "") + node.name;
-      let option_string = node._options.map((v) => (this.part(v).replace("\n", "\n "))).join("")
+      let option_string = node._options.map((v) => (this.part(v).replace(/\n/g, "\n "))).join("")
       let option_help = option_string ? "## 该子命令内可用的选项有:\n " : ""
       return (
         `# ${node.help_text}\n` +

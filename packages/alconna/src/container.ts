@@ -59,7 +59,7 @@ export class LruCache<K, V> {
   map: Map<K, DoubleLinkedListNode<K, V>>;
   list: DoubleLinkedList<K, V>;
 
-  constructor(capacity: number) {
+  constructor(capacity: number = -1) {
     this.capacity = capacity;
     this.map = new Map();
     this.list = new DoubleLinkedList();
@@ -83,7 +83,7 @@ export class LruCache<K, V> {
       this.list.remove(node);
       this.list.toHead(node);
     } else {
-      if (this.map.size >= this.capacity) {
+      if (this.capacity >= 0 && this.map.size >= this.capacity) {
         const k = this.list.removeTail();
         if (k) {
           this.map.delete(k);
@@ -160,5 +160,13 @@ export class LruCache<K, V> {
 
   entries() {
     return this.map.entries();
+  }
+
+  toString() {
+    let str = '';
+    for (let node = this.list.head.next; node !== this.list.tail; node = node!.next) {
+      str += `${node!.key} -> ${node!.value}, `;
+    }
+    return str;
   }
 }

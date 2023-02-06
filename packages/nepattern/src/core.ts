@@ -128,7 +128,7 @@ class Pattern<TOrigin, TSource = any> {
       if (pattern.startsWith("^") || pattern.endsWith("$"))
         throw Error(`不允许正则表达式 ${pattern} 头尾部分使用 '^' 或 '$' `)
       this.pattern = pattern;
-      this.regex = new RegExp(`^${pattern}$`);
+      this.regex = new RegExp( "^" + pattern + "$");
     }
     this.mode = mode;
     this.origin = origin;

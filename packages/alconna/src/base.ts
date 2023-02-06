@@ -92,7 +92,7 @@ export class CommandNode {
     this.separators = typeof separators == "string" ? [separators] : Array.from(separators);
     this.nargs = this.args.length;
     this.is_compact = this.separators.length == 1 && this.separators[0] == "";
-    this._dest = (dest || this.requires ? this.requires.join("_") + "_" + this.name : this.name).replace(/^-/, "");
+    this._dest = (dest || (this.requires.length > 0 ? this.requires.join("_") + "_" + this.name : this.name)).replace(/^-+/, "");
     this.help_text = help || this._dest;
   }
   separate(...seps: string[]):this {
@@ -134,19 +134,18 @@ export class Option extends CommandNode {
     requires: string[] | Set<string> = [],
     priority: number = 0,
   ) {
-    super(name);
-    this._priority = priority;
-    this.aliases = aliases;
-    let _name = name.split(" ")[-1];
+    let _name = name.split(" ").at(-1)!;
     if (_name.includes("|")) {
       let _aliases = _name.split("|");
       _aliases = _aliases.sort((a, b) => b.length - a.length).reverse();
       name = name.replace(_name, _aliases[0]);
       _name = _aliases[0];
-      this.aliases.push(..._aliases.slice(1));
+      aliases.push(..._aliases.slice(1));
     }
-    this.aliases.splice(0, 0, _name);
+    aliases.splice(0, 0, _name);
     super(name, args, dest, action, separators, help, requires);
+    this._priority = priority;
+    this.aliases = aliases;
   }
   alias(...args: string[]): this {
     args = args.sort((a, b) => b.length - a.length).reverse();
