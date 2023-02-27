@@ -10,7 +10,7 @@ function _accept(
   return res_p || res_t
 }
 
-enum PatternMode {
+enum MatchMode {
   KEEP,
   REGEX_MATCH,
   TYPE_CONVERT,
@@ -37,7 +37,7 @@ class ValidateResult<TVOrigin> {
   }
 
   toString() {
-    return `ValidateResult(${this.value}, ${this.flag})`
+    return `ValidateResult(${this._value || this._error}, ${this.flag})`
   }
 
   get value() {
@@ -67,7 +67,7 @@ class ValidateResult<TVOrigin> {
 
   step<T>(other: T | Constructor<T>): T;
   step<T>(other: (_: TVOrigin) => T): T | this;
-  step<T>(other: Pattern<T>): ValidateResult<T | Error>;
+  step<T>(other: Pattern<T>): ValidateResult<T>;
   step(other: ((_: any) => any) | Constructor<any> | any): any {
     if (other == Boolean)
       return this.isSuccess();
@@ -97,7 +97,7 @@ class ValidateResult<TVOrigin> {
 class Pattern<TOrigin, TSource = any> {
   regex: RegExp;
   pattern: string;
-  mode: PatternMode;
+  mode: MatchMode;
   origin: Constructor<TOrigin>;
   converter: (self: this, value: any) => TOrigin | null;
   validators: Array<(res: TOrigin) => boolean>;
@@ -111,7 +111,7 @@ class Pattern<TOrigin, TSource = any> {
   constructor(
     origin: Constructor<TOrigin>,
     pattern: RegExp | string,
-    mode: number | PatternMode = PatternMode.REGEX_MATCH,
+    mode: number | MatchMode = MatchMode.REGEX_MATCH,
     converter: ((self: Pattern<TOrigin, TSource>, value: any) => TOrigin | null) | null = null,
     alias: string | null = null,
     previous: Pattern<any> | null = null,
@@ -141,7 +141,7 @@ class Pattern<TOrigin, TSource = any> {
     this.type_accepts = _accepts.filter((v) => { return !(v instanceof Pattern) });
 
     this.converter = converter || (
-      (_, x) => { return mode == PatternMode.TYPE_CONVERT ? (new origin(x)) : eval(x) }
+      (_, x) => { return mode == MatchMode.TYPE_CONVERT ? (new origin(x)) : eval(x) }
     );
     this.validators = validators || [];
     this.anti = anti;
@@ -155,7 +155,7 @@ class Pattern<TOrigin, TSource = any> {
   }
 
   toString(): string {
-    if (this.mode == PatternMode.KEEP) {
+    if (this.mode == MatchMode.KEEP) {
       return this.alias ? this.alias :
         this.type_accepts.length === 0 && this.pattern_accepts.length === 0 ? 'Any' :
           this.acceptsRepr();
@@ -164,11 +164,11 @@ class Pattern<TOrigin, TSource = any> {
     if (this.alias)
       text = this.alias;
     else {
-      if (this.mode == PatternMode.REGEX_MATCH) {
+      if (this.mode == MatchMode.REGEX_MATCH) {
         text = this.pattern;
       }
       else if (
-        this.mode == PatternMode.REGEX_CONVERT ||
+        this.mode == MatchMode.REGEX_CONVERT ||
         (this.type_accepts.length === 0 && this.pattern_accepts.length === 0)
       )
         text = this.origin.name;
@@ -182,7 +182,7 @@ class Pattern<TOrigin, TSource = any> {
     return new Pattern<T, T>(
       type,
       "",
-      PatternMode.KEEP,
+      MatchMode.KEEP,
       (_, x) => { return new type(x) },
       type.name,
       null,
@@ -194,7 +194,7 @@ class Pattern<TOrigin, TSource = any> {
     return new Pattern<T, T>(
       (<any>obj).constructor,
       "",
-      PatternMode.KEEP,
+      MatchMode.KEEP,
       (_, x) => { return eval(x) },
       String(obj),
       null, null,
@@ -221,9 +221,9 @@ class Pattern<TOrigin, TSource = any> {
       if (!_accept(input, this.pattern_accepts, this.type_accepts))
         throw new MatchFailed(`参数 ${input} 的类型不正确`)
     }
-    if (this.mode == PatternMode.KEEP)
+    if (this.mode == MatchMode.KEEP)
       return <TOrigin><unknown>input;
-    if (this.mode == PatternMode.TYPE_CONVERT) {
+    if (this.mode == MatchMode.TYPE_CONVERT) {
       let res = this.converter(this, input);
       if (res == null || (<any>res).constructor !== this.origin) {
         if (this.previous == null)
@@ -245,7 +245,7 @@ class Pattern<TOrigin, TSource = any> {
     if (mat != null) {
       // @ts-ignore
       return (
-        this.mode == PatternMode.REGEX_CONVERT ? this.converter(this, mat.length < 2 ? mat[0] : mat.slice(1)) :
+        this.mode == MatchMode.REGEX_CONVERT ? this.converter(this, mat.length < 2 ? mat[0] : mat[1]) :
           mat.length < 2 ? mat[0] : mat[1]
       )
     }
@@ -313,5 +313,5 @@ class Pattern<TOrigin, TSource = any> {
   }
 }
 
-export { PatternMode, Pattern, ValidateResult }
+export { MatchMode, Pattern, ValidateResult }
 

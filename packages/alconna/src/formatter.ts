@@ -1,8 +1,9 @@
 import { Option, Subcommand } from "./base";
 import { Args, Arg } from "./args";
+import { THeader } from "./typing";
 import { AllParam, Empty, Pattern } from "@arcletjs/nepattern";
 
-function resolve_requires(opts: (Option | Subcommand)[]): Map<string, Map<string, any> | Option | Subcommand> {
+function resolveRequires(opts: (Option | Subcommand)[]): Map<string, Map<string, any> | Option | Subcommand> {
   let reqs: Map<string, Map<string, any> | Option | Subcommand> = new Map();
 
   function _update(target: Map<string, any>, source: Map<string, any>) {
@@ -20,7 +21,7 @@ function resolve_requires(opts: (Option | Subcommand)[]): Map<string, Map<string
       if (opt instanceof Option) {
         opt.aliases.forEach(alias => reqs.set(alias, opt));
       } else if (opt instanceof Subcommand) {
-        reqs.set(opt.name, resolve_requires(opt._options));
+        reqs.set(opt.name, resolveRequires(opt._options));
       }
     } else {
       let _reqs = new Map<string, any>();
@@ -37,7 +38,7 @@ function resolve_requires(opts: (Option | Subcommand)[]): Map<string, Map<string
       if (opt instanceof Option) {
         opt.aliases.forEach(alias => _cache.set(alias, opt));
       } else if (opt instanceof Subcommand) {
-        _cache.set(opt.name, resolve_requires(opt._options));
+        _cache.set(opt.name, resolveRequires(opt._options));
       }
       _update(reqs, _reqs);
     }
@@ -60,8 +61,8 @@ type TraceHead = {
   name: string;
   header: any[];
   description: string;
-  usage?: string;
-  examples?: string[];
+  usage: string | null;
+  examples: string[] | null;
 }
 
 class Trace {
@@ -76,97 +77,137 @@ class Trace {
     this.separators = separators;
     this.body = body;
   }
+
+  union(others: Trace[]) : Trace {
+    if (others.length == 0) {
+      return this;
+    }
+    if (others[0] == this) {
+      return this.union(others.slice(1));
+    }
+    let hds = Object.assign({}, this.head);
+    hds.header = [...new Set([...this.head.header, ...others[0].head.header])];
+    return new Trace(
+      hds,
+      this.args,
+      this.separators,
+      [...this.body, ...others[0].body]
+    ).union(others.slice(1));
+  }
 }
 
 
 
 export class TextFormatter {
-  data: Trace;
+  data: Map<string, Trace[]>;
   ignore: Set<string>;
 
-  constructor(command: Command) {
+  constructor() {
+    this.data = new Map();
     this.ignore = new Set();
+  }
 
-    command.nsConfig.option_name.help.forEach((value) => {this.ignore.add(value);});
-    command.nsConfig.option_name.shortcut.forEach((value) => {this.ignore.add(value);});
-    command.nsConfig.option_name.completion.forEach((value) => {this.ignore.add(value);});
-
-    let hds: typeof command.headers = Object.assign([], command.nsConfig.headers);
-    if (hds.includes(command.name as any)) {
-      hds.splice(hds.indexOf(command.name as any), 1);
+  add(base: Command) {
+    base.nsConfig.optionName.help.forEach(name => this.ignore.add(name));
+    base.nsConfig.optionName.shortcut.forEach(name => this.ignore.add(name));
+    base.nsConfig.optionName.completion.forEach(name => this.ignore.add(name));
+    let hds: THeader = Object.assign([], base.headers);
+    //@ts-ignore
+    if (hds.includes(base.name)) {
+      //@ts-ignore
+      hds.splice(hds.indexOf(base.name), 1);
     }
-    this.data = new Trace(
+    let res = new Trace(
       {
-        name: command.name,
-        header: hds,
-        description: command._meta.description,
-        usage: command._meta.usage || undefined,
-        examples: command._meta.examples
+        name: base.name,
+        header: hds || [],
+        description: base._meta.description,
+        usage: base._meta.usage,
+        examples: base._meta.examples
       },
-      command.args,
-      command.separators,
-      command._options
-    )
+      base.args,
+      base.separators,
+      Array.from(base._options)
+    );
+    if (this.data.has(base.name)) {
+      this.data.get(base.name)!.push(res);
+    } else {
+      this.data.set(base.name, [res]);
+    }
+    return this;
+  }
+
+  remove(base: Command | string) {
+    if (typeof base == "string") {
+      this.data.delete(base);
+    } else {
+      try {
+        let data = this.data.get(base.path)!;
+        data.splice(data.indexOf(data.find(d => d.head.name == base.name)!), 1);
+      }
+      catch (e) { }
+    }
   }
 
   format(end: any[] | null = null) {
-    if (!end || end.length == 0 || end[0] == "") {
-      return this.entry(this.data);
-    }
-    let _cache: any = resolve_requires(this.data.body);
-    let _parts: string[] = [];
-    for (let part of end) {
-      if (_cache instanceof Map && _cache.has(part)) {
-        _cache = <any>_cache.get(part)!;
-        _parts.push(part);
+    function handle(traces: Trace[]) {
+      let trace = traces[0].union(traces.slice(1));
+      if (!end || end.length == 0 || end[0] == "") {
+        return trace;
       }
-    }
-    if (_parts.length == 0) {
-      return this.entry(this.data);
-    }
-    if (_cache instanceof Map) {
-      let ensure = ensure_node(_parts[_parts.length - 1], this.data.body);
-      if (ensure) {
-        _cache = ensure;
-      } else {
-        let _opts: (Option | Subcommand)[] = [];
-        let _visited: Set<any> = new Set();
-        for (let [key, value] of _cache) {
-          if (value instanceof Map) {
-            _opts.push(new Option(key).require(..._parts));
-          } else if (!_visited.has(value)) {
-            _opts.push(value);
-            _visited.add(value);
-          }
+      let _cache: any = resolveRequires(trace.body);
+      let _parts: string[] = [];
+      for (let part of end) {
+        if (_cache instanceof Map && _cache.has(part)) {
+          _cache = <any>_cache.get(part)!;
+          _parts.push(part);
         }
-        return this.entry(new Trace(
-          {name: _parts.at(-1)!, header: [], description: _parts.at(-1)!},
-          new Args(),
-          this.data.separators,
-          _opts
-        ))
       }
+      if (_parts.length == 0) {
+        return trace;
+      }
+      if (_cache instanceof Map) {
+        let ensure = ensure_node(_parts[_parts.length - 1], trace.body);
+        if (ensure) {
+          _cache = ensure;
+        } else {
+          let _opts: (Option | Subcommand)[] = [];
+          let _visited: Set<any> = new Set();
+          for (let [key, value] of _cache) {
+            if (value instanceof Map) {
+              _opts.push(new Option(key).require(..._parts));
+            } else if (!_visited.has(value)) {
+              _opts.push(value);
+              _visited.add(value);
+            }
+          }
+          return new Trace(
+            {name: _parts.at(-1)!, header: [], description: _parts.at(-1)!, usage: null, examples: null},
+            new Args(),
+            trace.separators,
+            _opts
+          )
+        }
+      }
+      if (_cache instanceof Option) {
+        return new Trace(
+          {name: _cache.name, header: [], description: _cache.help_text, usage: null, examples: null},
+          _cache.args,
+          _cache.separators, []
+        )
+      }
+      if (_cache instanceof Subcommand) {
+        return new Trace(
+          {name: _cache.name, header: [], description: _cache.help_text, usage: null, examples: null},
+          _cache.args,
+          _cache.separators,
+          _cache._options
+        )
+      }
+      return trace;
     }
-    if (_cache instanceof Option) {
-      return this.entry(new Trace(
-        {name: _cache.name, header: [], description: _cache.help_text},
-        _cache.args,
-        _cache.separators, []
-      ))
-    }
-    if (_cache instanceof Subcommand) {
-      return this.entry(new Trace(
-        {
-          name: _cache.name,
-          header: [],
-          description: _cache.help_text
-        },
-        _cache.args,
-        _cache.separators,
-        _cache._options
-      ))
-    }
-    return this.entry(this.data);
+
+    return Array.from(this.data.values()).map(handle).map(this.entry).join("\n");
   }
 
   entry(trace: Trace): string {

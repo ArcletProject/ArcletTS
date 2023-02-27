@@ -1,25 +1,30 @@
-import { Pattern, PatternMode } from "./core";
-import { AllParam, Ellipsis, Empty, isConstructor } from "./utils";
+import { Pattern, MatchMode } from "./core";
+import { AllParam, Empty, isConstructor } from "./utils";
 import { Regex, Switch, Union } from "./base";
+import { globalPatterns, allPatterns } from "./context";
 import * as fs from "node:fs"
 
 export const ANY: Pattern<any> = new Pattern(
-  Object, ".+", PatternMode.KEEP, null, "any"
+  Object, ".+", MatchMode.KEEP, null, "any"
+)
+
+export const ANY_STRING: Pattern<string> = new Pattern(
+  String, ".+", MatchMode.TYPE_CONVERT, null, "any_string"
 )
 
 export const STRING: Pattern<string, string> = new Pattern(
-  String, ".+?", PatternMode.KEEP, null, "string", null, ["String"]
+  String, ".+?", MatchMode.KEEP, null, "string", null, ["String"]
 )
 
 export const EMAIL: Pattern<string, string> = new Pattern(
-  String, "(?:[\w\.+-]+)@(?:[\w\.-]+)\.(?:[\w\.-]+)", PatternMode.REGEX_MATCH,
+  String, "(?:[\w\.+-]+)@(?:[\w\.-]+)\.(?:[\w\.-]+)", MatchMode.REGEX_MATCH,
   null, "email"
 )
 
 export const IP: Pattern<string, string> = new Pattern(
   String,
   "(?:(?:[01]{0,1}[0-9]{0,1}[0-9]|2[0-4][0-9]|25[0-5])\.){3}(?:[01]{0,1}[0-9]{0,1}[0-9]|2[0-4][0-9]|25[0-5]):?(?:[0-9]+)?",
-  PatternMode.REGEX_MATCH,
+  MatchMode.REGEX_MATCH,
   null, "ip"
 )
 
@@ -35,14 +40,14 @@ export const URL: Pattern<string, string> = new Pattern(
   + "(:[0-9]{1,4})?" // 端口- :80
   + "((/?)|" // a slash isn't required if there is no file name
   + "(/[0-9a-z_!~*'().;?:@&=+$,%#-]+)+/?)",
-  PatternMode.REGEX_MATCH,
+  MatchMode.REGEX_MATCH,
   null, "url"
 )
 
 export const HEX: Pattern<number, string> = new Pattern(
   Number,
   "(?:0x)?[0-9a-fA-F]+",
-  PatternMode.REGEX_CONVERT,
+  MatchMode.REGEX_CONVERT,
   (_, x: string): number => { return eval(`0x${x}`) },
   "hex"
 )
@@ -50,7 +55,7 @@ export const HEX: Pattern<number, string> = new Pattern(
 export const HEX_COLOR: Pattern<string, string> = new Pattern(
   String,
   "(#[0-9a-fA-F]{6})",
-  PatternMode.REGEX_CONVERT,
+  MatchMode.REGEX_CONVERT,
   (_, x: string) => { return x.substring(1) },
   "color"
 )
@@ -58,65 +63,33 @@ export const HEX_COLOR: Pattern<string, string> = new Pattern(
 export const DATE: Pattern<Date, string | number | Date> = new Pattern(
   Date,
   "",
-  PatternMode.TYPE_CONVERT,
+  MatchMode.TYPE_CONVERT,
   (_, x) => { return new Date(x) },
   "date",
   null,
   ["String", "Number"]
 )
 
-export const patternMap: Map<any, Pattern<any> | typeof AllParam | typeof Empty> = new Map()
-patternMap.set("any", ANY)
-patternMap.set(Ellipsis, ANY)
-patternMap.set("email", EMAIL)
-patternMap.set("color", HEX_COLOR)
-patternMap.set("hex", HEX)
-patternMap.set("ip", IP)
-patternMap.set("url", URL)
-patternMap.set("...", ANY)
-patternMap.set("*", AllParam)
-patternMap.set("", Empty)
-patternMap.set("date", DATE)
-
-export function set_pattern(
-  target: Pattern<any>,
-  alias: string | null = null,
-  cover: boolean = true,
-  data: Map<any, any> | null = null
-) {
-  data = data || patternMap
-  for (let k of [alias, target.alias, target.origin, target.origin.name]) {
-    if (!k)
-      continue
-    if (!data.has(k) || cover)
-      data.set(k, target)
-    else {
-      let pat = data.get(k)
-      data.set(
-        k, (
-        pat instanceof Union ?
-          new Union([...pat.for_validate, ...pat.for_equal, target]) :
-          new Union([pat, target])
-      )
-      )
-    }
+globalPatterns().update(
+  {
+    "any": ANY,
+    Ellipsis: ANY,
+    "any_string": ANY_STRING,
+    "email": EMAIL,
+    "color": HEX_COLOR,
+    "hex": HEX,
+    "ip": IP,
+    "url": URL,
+    "date": DATE,
+    "...": ANY,
   }
-}
+)
 
-export function set_patterns(
-  patterns: Iterable<Pattern<any>>,
-  cover: boolean = true,
-  data: Map<any, any> | null = null
-) {
-  for (let pat of patterns) {
-    set_pattern(pat, null, cover, data)
-  }
-}
 
 export const FILE: Pattern<Buffer, fs.PathLike> = new Pattern(
   Buffer,
   "",
-  PatternMode.TYPE_CONVERT,
+  MatchMode.TYPE_CONVERT,
   (_, x: fs.PathLike) => {
     return fs.existsSync(x) ? fs.readFileSync(x) : null
   },
@@ -128,7 +101,7 @@ export const FILE: Pattern<Buffer, fs.PathLike> = new Pattern(
 export const INTEGER: Pattern<number> = new Pattern(
   Number,
   "\-?[0-9]+",
-  PatternMode.REGEX_CONVERT,
+  MatchMode.REGEX_CONVERT,
   (_, x) => { return Number(x) },
   "int"
 )
@@ -136,7 +109,7 @@ export const INTEGER: Pattern<number> = new Pattern(
 export const NUMBER: Pattern<number> = new Pattern(
   Number,
   "\-?[0-9]+\.?[0-9]*",
-  PatternMode.TYPE_CONVERT,
+  MatchMode.TYPE_CONVERT,
   (_, x) => { return Number(x) },
   "number",
 )
@@ -144,7 +117,7 @@ export const NUMBER: Pattern<number> = new Pattern(
 export const BOOL: Pattern<boolean, string> = new Pattern(
   Boolean,
   /(?:true|false)/i,
-  PatternMode.REGEX_CONVERT,
+  MatchMode.REGEX_CONVERT,
   (_, x) => { return x.toLowerCase() === "true" },
   "boolean"
 )
@@ -152,7 +125,7 @@ export const BOOL: Pattern<boolean, string> = new Pattern(
 export const ARRAY: Pattern<any[]> = new Pattern(
   Array,
   "\[.+?\]",
-  PatternMode.REGEX_CONVERT,
+  MatchMode.REGEX_CONVERT,
   null,
   "array"
 )
@@ -160,19 +133,20 @@ export const ARRAY: Pattern<any[]> = new Pattern(
 export const DICT: Pattern<object> = new Pattern(
   Object,
   "\{.+?\}",
-  PatternMode.REGEX_CONVERT,
+  MatchMode.REGEX_CONVERT,
   null,
   "dict"
 )
 
-set_patterns([FILE, STRING, INTEGER, NUMBER, BOOL, ARRAY, DICT])
+globalPatterns().adds([FILE, STRING, INTEGER, NUMBER, BOOL, ARRAY, DICT])
 
 
-export function parser(item: any): Pattern<any> | typeof AllParam | typeof Empty {
+export function parser(item: any): Pattern<any> {
   if (item instanceof Pattern || item === AllParam)
     return item
+  let patternMap = allPatterns()
   try {
-    if (patternMap.has(item))
+    if (item && patternMap.has(item))
       return patternMap.get(item)!
   }
   catch (e) {
@@ -180,7 +154,7 @@ export function parser(item: any): Pattern<any> | typeof AllParam | typeof Empty
   }
   if (typeof item === "function" && !isConstructor(item)) {
     return new Pattern(
-      Object, "", PatternMode.TYPE_CONVERT,
+      Object, "", MatchMode.TYPE_CONVERT,
       (_, x: Parameters<typeof item>) => {
         try {
           return new item(x)
@@ -204,7 +178,7 @@ export function parser(item: any): Pattern<any> | typeof AllParam | typeof Empty
       }
       return new Union(out)
     }
-    return new Pattern(String, item, PatternMode.REGEX_MATCH, null, `'${item}'`)
+    return new Pattern(String, item, MatchMode.REGEX_MATCH, null, `'${item}'`)
   }
   if (item instanceof Array) {
     return new Union(
@@ -219,6 +193,7 @@ export function parser(item: any): Pattern<any> | typeof AllParam | typeof Empty
     return new Switch(item)
   }
   if (item == null) {
+    //@ts-ignore
     return Empty
   }
   return (typeof item == "function" && isConstructor(item)) ? Pattern.of(item) : Pattern.on(item)

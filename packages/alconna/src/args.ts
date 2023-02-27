@@ -1,5 +1,5 @@
-import {Pattern, AllParam, Empty, parser, patternMap, Union, ANY} from "@arcletjs/nepattern";
-import {InvalidParam, NullMessage} from "./errors";
+import {Pattern, AllParam, Empty, parser, Union, ANY} from "@arcletjs/nepattern";
+import {InvalidParam} from "./errors";
 import {KeyWordVar, MultiVar} from "./typing";
 import {config} from "./config";
 
@@ -70,6 +70,7 @@ export class Arg<T> {
       //@ts-ignore
       _default.default_ = Empty;
     }
+    //@ts-ignore
     if (_value === Empty) {
       throw new InvalidParam(config.lang.replaceKeys("args.value_error", {target: name}));
     }
@@ -120,20 +121,20 @@ export class Args {
   }
 
   argument: Arg<any>[];
-  var_positional: string | null;
-  var_keyword: string | null;
-  keyword_only: string[];
-  optional_count: number;
+  varPositional: string | null;
+  varKeyword: string | null;
+  keywordOnly: string[];
+  optionalCount: number;
   private visited: Set<string>;
 
   constructor(
     ...args: Array<Arg<any> | string | string[]>
   ) {
     this.argument = args.filter((x) => x instanceof Arg).map((x) => x as Arg<any>);
-    this.var_positional = null;
-    this.var_keyword = null;
-    this.keyword_only = [];
-    this.optional_count = 0;
+    this.varPositional = null;
+    this.varKeyword = null;
+    this.keywordOnly = [];
+    this.optionalCount = 0;
     this.visited = new Set();
     this._parse();
     this.separate(...args.filter((x) => typeof x === "string" || x instanceof Array).map((x) => x as string | string[]).flat());
@@ -177,22 +178,22 @@ export class Args {
       }
       if (arg.value instanceof MultiVar && !_limit) {
         if (arg.value.base instanceof KeyWordVar) {
-          if (this.var_keyword) {
+          if (this.varKeyword) {
             throw new InvalidParam(config.lang.require("args.duplicate_kwargs"));
           }
-          this.var_keyword = arg.name;
-        } else if (this.var_positional) {
+          this.varKeyword = arg.name;
+        } else if (this.varPositional) {
           throw new InvalidParam(config.lang.require("args.duplicate_varargs"));
         } else {
-          this.var_positional = arg.name;
+          this.varPositional = arg.name;
         }
         _limit = true;
       }
       if (arg.value instanceof KeyWordVar) {
-        if (this.var_keyword || this.var_positional) {
+        if (this.varKeyword || this.varPositional) {
           throw new InvalidParam(config.lang.require("args.exclude_mutable_args"));
         }
-        this.keyword_only.push(arg.name);
+        this.keywordOnly.push(arg.name);
         if (arg.separators.includes(arg.value.sep)) {
           let _arg = new Arg(`_key_${arg.name}`, `-*${arg.name}`);
           _tmp.splice(-1, 0, _arg);
@@ -200,10 +201,10 @@ export class Args {
         }
       }
       if (arg.flag.includes(ArgFlag.OPTIONAL)) {
-        if (this.var_positional || this.var_keyword) {
+        if (this.varPositional || this.varKeyword) {
           throw new InvalidParam(config.lang.require("args.exclude_mutable_args"));
         }
-        this.optional_count++;
+        this.optionalCount++;
       }
     }
     this.argument = _tmp;
@@ -233,6 +234,7 @@ export class Args {
     if (other instanceof Args) {
       this.argument.push(...other.argument);
       this._parse();
+      this.keywordOnly = [...new Set(this.keywordOnly.concat(other.keywordOnly))];
     } else if (other instanceof Arg) {
       this.argument.push(other);
       this._parse();
@@ -251,42 +253,4 @@ export class Args {
   get empty(): boolean {
     return this.argument.length < 1;
   }
-}
-
-export function fromArray(args: Array<[string?, string?, string?]>, custom: { [key: string]: string }) {
-  let _args = new Args();
-  for (let arg of args) {
-    if (arg.length < 1) {
-      throw new NullMessage("args");
-    }
-    let _default = arg[2]?.trim() || null;
-    let _name = (<string>arg[0]).trim();
-    let _value = _name.startsWith("...") ? AllParam : (
-      _name.startsWith("..") ? ANY : (
-        arg[1]?.trim() || _name.trim().replace(/^[-\.]+/, "")
-      )
-    )
-    _name = _name.replace(/^[-\.]+/, "");
-    let _multi: "+" | "*" = "*";
-    let _kw = false;
-    let _slice = -1;
-    if (_value === ANY || _value === AllParam) {
-      _args.add(_name, _value, _default);
-    } else {
-      let mat = _value.match(/^(.+?)([+*]+)(?:\[)?(\d*)(?:])?$/);
-      if (mat) {
-        _value = mat[1];
-        _multi = mat[2][0];
-        _kw = mat[2].length > 1;
-        _slice = parseInt(mat[3] || "-1");
-      }
-      let value = patternMap.get(_value) || custom[_value as string] || parser(eval(_value as string));
-      let default_ = (_default && value instanceof Pattern) ? new value.origin(_default) : _default;
-      if (_multi) {
-        value = new MultiVar(_kw ? new KeyWordVar(value) : value, _slice > 1 ? _slice : _multi);
-      }
-      _args.add(_name, value, default_);
-    }
-  }
-  return _args;
 }

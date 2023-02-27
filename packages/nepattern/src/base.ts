@@ -1,4 +1,4 @@
-import {Pattern, PatternMode} from "./core";
+import {Pattern, MatchMode} from "./core";
 import {Constructor, Empty, MatchFailed, Ellipsis, Dict} from "./utils";
 
 type RegexGroup = { [key: string]: string }
@@ -8,7 +8,7 @@ export class Regex extends Pattern<RegexGroup | string[], string> {
     pattern: string,
     alias: string | null = null
   ) {
-    super(Array, pattern, PatternMode.REGEX_MATCH, null, alias || "regex[:group]");
+    super(Array, pattern, MatchMode.REGEX_MATCH, null, alias || "regex[:group]");
   }
 
   match(input: any): RegexGroup | string[] {
@@ -30,7 +30,7 @@ export class Union<T extends any[]> extends Pattern<T extends (infer B | Pattern
   constructor(
     ...base: T
   ) {
-    super(String, "", PatternMode.KEEP)
+    super(String, "", MatchMode.KEEP)
     this.optional = false
     this.for_validate = []
     this.for_equal = []
@@ -130,14 +130,14 @@ export class Mapping<TV, TK extends string | number | symbol = string> extends P
     super(
       Object,
       "\{(.+?)\}",
-      PatternMode.REGEX_MATCH
+      MatchMode.REGEX_MATCH
     );
     this.key = key
     this.value = value
     this.alias = "map<" + this.key.toString() + ", " + this.value.toString() + ">"
   }
 
-  _generate_items(res: string | Dict<any>) {
+  _generate_items(res: string | Dict) {
     if (typeof res == "string") {
       let out: Array<[string, string]> = []
       let holders = res.split(/\s*[，,]\s*/)
@@ -191,14 +191,14 @@ export class Switch<TC, TS extends string | number | typeof Ellipsis> extends Pa
   constructor(data: Map<TS, TC>)
   constructor(data: Map<TS, TC> | Dict<TC, TS>) {
     if (data instanceof Map) {
-      super((<any>data.values().next().value).constructor, "", PatternMode.TYPE_CONVERT);
+      super((<any>data.values().next().value).constructor, "", MatchMode.TYPE_CONVERT);
       this.switch = data
     } else {
       let map = new Map()
       for (let key in data) {
         map[key as any] = data[key]
       }
-      super((<any>map.values().next().value).constructor, "", PatternMode.TYPE_CONVERT);
+      super((<any>map.values().next().value).constructor, "", MatchMode.TYPE_CONVERT);
       this.switch = map
     }
   }

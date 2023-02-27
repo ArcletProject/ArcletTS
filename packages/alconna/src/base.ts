@@ -1,11 +1,15 @@
 import {isPromise} from "node:util/types";
-import {Args, fromArray} from "./args";
+import {Args, Arg} from "./args";
 import { InvalidParam } from "./errors";
 import {config} from "./config";
 import { Dict } from "@arcletjs/nepattern";
+import { OptionResult, SubcommandResult } from "./model";
 
 export class Action {
-  static ensure(action: Action | ((data: Dict) => void)): Action {
+  static ensure(action: Action | ((data: Dict) => void) | null): Action | null {
+    if (!action) {
+      return null
+    }
     if (action instanceof Action) {
       return action;
     }
@@ -52,13 +56,55 @@ export class Action {
   }
 }
 
+export function execArgs(
+  args: Map<string, any>,
+  func: Action,
+  raise: boolean
+) {
+  let result = new Map<string, any>(args);
+  let [kwargs, kwonly, varargs, kwKey, varKey] = [new Map(), new Map(), [], null, null];
+  if (result.has("$kwargs")) {
+    [kwargs, kwKey] = result.get("$kwargs");
+    result.delete("$kwargs");
+    result.delete(<string><unknown>kwKey);
+  }
+  if (result.has("$varargs")) {
+    [varargs, varKey] = result.get("$varargs");
+    result.delete("$varargs");
+    result.delete(<string><unknown>varKey);
+  }
+  if (result.has("$kwonly")) {
+    kwonly = result.get("$kwonly");
+    for (let key of kwonly.keys()) {
+      result.delete(key);
+    }
+  }
+  let additions = new Map<string, any>(...kwonly, ...kwargs);
+  let res = func.exec(result, varargs, additions, raise);
+  if (kwKey) {
+    res[kwKey] = kwargs;
+  }
+  if (varKey) {
+    res[varKey] = varargs;
+  }
+  return res;
+}
+
+export function execData(
+  data: OptionResult | SubcommandResult,
+  func: Action,
+  raise: boolean
+) {
+  return Object.keys(data.args).length > 0 ? ["args", execArgs(data.args, func, raise)] :
+  ["value", func.fn()];
+}
 
 export class CommandNode {
   name: string;
   _dest: string;
   args: Args;
   separators: string[];
-  _action: Action;
+  _action: Action | null;
   help_text: string;
   requires: string[];
   nargs: number;
@@ -66,7 +112,7 @@ export class CommandNode {
 
   constructor(
     name: string,
-    args: Args | string | null = null,
+    args: Args | Arg<any> | null = null,
     dest: string | null = null,
     action: ((data: Dict) => void) | Action | null = null,
     separators: string | Iterable<string> = [" "],
@@ -84,11 +130,8 @@ export class CommandNode {
     this.name = _parts[_parts.length - 1];
     this.requires = Array.from(requires);
     this.requires.push(..._parts.slice(0, -1));
-    this.args = args ? (args instanceof Args ? args : fromArray(
-      args.split(/\s*[,，]\s*/).map((x) => x.split(/\s*[:：=]\s*/) as [string?, string?, string?]),
-      {}
-    )) : new Args();
-    this._action = Action.ensure(action || (() => {}));
+    this.args = new Args().merge(args)
+    this._action = Action.ensure(action);
     this.separators = typeof separators == "string" ? [separators] : Array.from(separators);
     this.nargs = this.args.length;
     this.is_compact = this.separators.length == 1 && this.separators[0] == "";
@@ -125,7 +168,7 @@ export class Option extends CommandNode {
 
   constructor(
     name: string,
-    args: Args | string | null = null,
+    args: Args | Arg<any> | null = null,
     aliases: string[] = [],
     dest: string | null = null,
     action: ((data: Dict) => void) | Action | null = null,
@@ -164,7 +207,7 @@ export class Subcommand extends CommandNode {
   _options: Array<Option | Subcommand>;
   constructor(
     name: string,
-    args: Args | string | null = null,
+    args: Args | Arg<any> | null = null,
     options: Array<Option | Subcommand> = [],
     dest: string | null = null,
     action: ((data: Dict) => void) | Action | null = null,

@@ -1,4 +1,6 @@
 import * as fs from "node:fs"
+import { Constructor } from "@arcletjs/nepattern";
+import { THeader } from "./typing";
 
 type OptionNames = {
   help: string[],
@@ -9,13 +11,12 @@ type OptionNames = {
 export class Namespace {
   constructor(
     public name: string,
-    public headers: Array<string | object> | Array<[object, string]> = [],
+    public headers: THeader = [],
     public separators: string[] = [" "],
-    //public behaviors: any[] = [],
-    public formatter_gen: ((cmd: Command) => TextFormatter) | null = null,
-    public fuzzy_match: boolean = false,
-    public raise_error: boolean = false,
-    public option_name: OptionNames = {
+    public formatterType: Constructor<any> | null = null,
+    public fuzzyMatch: boolean = false,
+    public throwError: boolean = false,
+    public optionName: OptionNames = {
       help: ["--help", "-h"],
       shortcut: ["--shortcut", "-s"],
       completion: ["--comp", "-c"]
@@ -24,11 +25,10 @@ export class Namespace {
     this.name = name;
     this.headers = headers;
     this.separators = separators;
-    //this.behaviors = behaviors;
-    this.formatter_gen = formatter_gen;
-    this.fuzzy_match = fuzzy_match;
-    this.raise_error = raise_error;
-    this.option_name = option_name;
+    this.formatterType = formatterType;
+    this.fuzzyMatch = fuzzyMatch;
+    this.throwError = throwError;
+    this.optionName = optionName;
   }
 
   equals(other: Namespace): boolean {
@@ -36,7 +36,7 @@ export class Namespace {
   }
 
   toString(): string {
-    return `Namespace(${this.name}, ${this.headers}, ${this.separators}, ${this.fuzzy_match}, ${this.raise_error}, ${this.option_name})`;
+    return `Namespace(${this.name}, ${this.headers}, ${this.separators}, ${this.fuzzyMatch}, ${this.throwError}, ${this.optionName})`;
   }
 }
 

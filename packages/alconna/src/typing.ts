@@ -1,5 +1,6 @@
-import {Pattern, parser, PatternMode} from "@arcletjs/nepattern";
+import {Pattern, parser, MatchMode} from "@arcletjs/nepattern";
 
+export type THeader = Array<string | object> | Array<[object, string]>;
 export interface DataCollection<Unit = string> {
   get length(): number;
 
@@ -14,7 +15,7 @@ export class KeyWordVar<T> extends Pattern<T> {
 
   constructor(value: any, sep: string = "=") {
     let base = (value instanceof Pattern) ? value : parser(value);
-    super((<Pattern<T>>base).origin, ".+?", PatternMode.KEEP, null, `@${sep}${base.toString()}`);
+    super((<Pattern<T>>base).origin, ".+?", MatchMode.KEEP, null, `@${sep}${base.toString()}`);
     this.base = <Pattern<T>>base;
     this.sep = sep;
   }
@@ -32,7 +33,7 @@ export class MultiVar<T> extends Pattern<T> {
   constructor(value: any, flag: number | "+" | "*" = "+") {
     let base = (value instanceof Pattern) ? value : parser(value);
     let origin = base instanceof KeyWordVar ? Map<String, T> : Array<T>;
-    super(origin, ".+?", PatternMode.KEEP);
+    super(origin, ".+?", MatchMode.KEEP);
     this.base = <Pattern<T>>base;
     if (typeof flag !== "number") {
       this.alias = `(${this.base.toString()}${flag})`;

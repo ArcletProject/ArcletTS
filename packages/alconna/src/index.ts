@@ -1,5 +1,5 @@
 export * from "./util";
-export * from "./container";
+export * from "./collection";
 export * from "./errors";
 export * from "./typing";
 export * from "./model";

@@ -1,26 +1,25 @@
-import {Action} from "./base";
 import { Dict } from "@arcletjs/nepattern";
 
-class OutputAction extends Action {
-  generator: () => string;
-
+class Sender {
   constructor(
-    fn: (data: any) => any,
-    generator: () => string,
+    public fn: (data: any) => any,
+    public generator: () => string,
   ) {
-    super(fn);
+    this.fn = fn;
     this.generator = generator;
   }
 
-  exec(params: any=null, varargs=null, kwargs=null, raise: boolean = false): any {
-    return super.exec({output: this.generator()}, varargs, kwargs, raise);
+  exec() : Dict {
+    let res = this.generator();
+    let data = this.fn(res);
+    return data && data instanceof Object ? data : { output: res };
   }
 }
 
 class OutputManager {
   constructor(
     public cache: Map<string, (data: any) => any> = new Map(),
-    public outputs: Map<string, OutputAction> = new Map(),
+    public outputs: Map<string, Sender> = new Map(),
     public send_fn: (data: string) => any = (data: string) => console.log(data),
     private out_cache: Map<string, Dict> = new Map(),
   ) {
@@ -30,18 +29,18 @@ class OutputManager {
     this.out_cache = out_cache;
   }
 
-  send(command: string | null = null, generator: (() => string) | null = null, raise: boolean = false): void {
-    let output = this.getOutput(command);
-    if (output) {
+  send(command: string | null = null, generator: (() => string) | null = null, raise: boolean = false) {
+    let sender = this.getSender(command);
+    if (sender) {
       if (generator) {
-        output.generator = generator;
+        sender.generator = generator;
       }
     } else if (generator) {
-      output = this.register(generator, command).getOutput(command)!;
+      sender = this.register(generator, command).getSender(command)!;
     } else {
       throw new Error(`No output registered for command ${command}`);
     }
-    let out = output.exec(null, null, null, raise);
+    let out = sender.exec();
     if (command) {
       if (this.out_cache.has(command)) {
         this.out_cache.set(command, Object.assign(this.out_cache.get(command)!, out));
@@ -52,7 +51,7 @@ class OutputManager {
     return out;
   }
 
-  getOutput(command: string | null = null): OutputAction | undefined {
+  getSender(command: string | null = null): Sender | undefined {
     let name = command || "$global";
     return this.outputs.get(name)
   }
@@ -62,10 +61,10 @@ class OutputManager {
     if (this.outputs.has(name)) {
       this.outputs.get(name)!.generator = generator;
     } else if (this.cache.has(name)) {
-      this.outputs.set(name, new OutputAction(this.cache.get(name)!, generator));
+      this.outputs.set(name, new Sender(this.cache.get(name)!, generator));
       this.cache.delete(name);
     } else {
-      this.outputs.set(name, new OutputAction(this.send_fn, generator));
+      this.outputs.set(name, new Sender(this.send_fn, generator));
     }
     return this;
   }

@@ -23,14 +23,14 @@ export class Sentence {
 
 export class OptionResult {
   public value: any;
-  public args: { [key: string]: any };
+  public args: Map<string, any>;
 
   constructor(
     value: any = Ellipsis,
-    args: { [key: string]: any } | null = null,
+    args: Map<string, any> | null = null,
   ) {
     this.value = value;
-    this.args = args || {};
+    this.args = args || new Map();
   }
 
   toString() {
@@ -40,20 +40,20 @@ export class OptionResult {
 
 export class SubcommandResult {
   public value: any;
-  public args: { [key: string]: any };
-  public options: { [key: string]: OptionResult };
-  public subcommands: { [key: string]: SubcommandResult };
+  public args: Map<string, any>;
+  public options: Map<string, OptionResult>;
+  public subcommands: Map<string, SubcommandResult>;
 
   constructor(
     value: any = Ellipsis,
-    args: { [key: string]: any } | null = null,
-    options: { [key: string]: OptionResult } | null = null,
-    subcommands: { [key: string]: SubcommandResult } | null = null,
+    args: Map<string, any> | null = null,
+    options: Map<string, OptionResult> | null = null,
+    subcommands: Map<string, SubcommandResult> | null = null,
   ) {
     this.value = value;
-    this.args = args || {};
-    this.options = options || {};
-    this.subcommands = subcommands || {};
+    this.args = args || new Map();
+    this.options = options || new Map()
+    this.subcommands = subcommands || new Map()
   }
 
   toString() {

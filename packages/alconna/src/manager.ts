@@ -1,9 +1,16 @@
 import { ExceedMaxCount } from "./errors";
-import { LruCache } from "./container";
+import { LruCache } from "./collection";
 import { DataCollection } from "./typing";
 import { config, Namespace } from "./config";
 import { formatKeys } from "./util";
 import { Dict } from "@arcletjs/nepattern";
+
+export interface ShortcutArgs {
+  command?: DataCollection<any>;
+  args?: any[];
+  options?: Dict<any>;
+}
+
 
 class Manager {
   sign: string = "ALCONNA:";
@@ -153,7 +160,7 @@ class Manager {
     }
     let names = new Set<string>()
     for (let command of commands) {
-      command.nsConfig.option_name["help"].forEach(name => names.add(name))
+      command.nsConfig.optionName["help"].forEach(name => names.add(name))
     }
     footer = footer || config.lang.replaceKeys("manager.help_footer", {help: Array.from(names).join("|")})
     return header + "\n" + helps + "\n" + footer

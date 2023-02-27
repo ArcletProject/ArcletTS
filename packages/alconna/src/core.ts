@@ -1,21 +1,64 @@
-import { Action, Option, Subcommand } from "./base";
+import { Constructor } from "@arcletjs/nepattern";
+import { Action, Option, Subcommand, execArgs, execData } from "./base";
 import { Args, Arg } from "./args";
 import { Namespace, config } from "./config";
-import { DataCollection } from "./typing";
+import { DataCollection, THeader } from "./typing";
 import { manager } from "./manager";
 import { TextFormatter } from "./formatter";
+import { ParseResult, Behavior } from "./result";
+import * as path from "path";
 
-type Header = Array<string | object> | Array<[object, string]>
+class ActionHandler extends Behavior {
+  private readonly mainAction: Action | null;
+  private readonly options: Map<string, Action>;
+
+  private step(src: Subcommand, prefix: string | null = null) {
+    for (let opt of src._options) {
+      if (opt._action) {
+        this.options.set(prefix ? `${prefix}.${opt._dest}` : opt._dest, opt._action);
+      }
+      if ("_options" in opt) {
+        this.step(opt, prefix ? `${prefix}.${opt._dest}` : opt._dest);
+      }
+    }
+  }
+
+  constructor(
+    source: Command
+  ) {
+    super();
+    this.mainAction = source._action;
+    this.options = new Map();
+    this.step(source);
+  }
+
+  execute(result: ParseResult<any>) {
+    this.beforeExecute(result);
+    let source = result.source;
+    if (this.mainAction) {
+      this.update(result, "mainArgs", execArgs(result.mainArgs, this.mainAction, source._meta.throwError))
+    }
+    for (let [key, action] of this.options) {
+      let d = result.query(key, undefined)
+      if (d !== undefined) {
+        let [end, value] = execData(d, action, source._meta.throwError);
+        this.update(result, `${path}.${end}`, value);
+      }
+    }
+  }
+}
+
+
 
 export interface TCommandMeta {
   description: string,
   usage: string | null,
   examples: string[],
   author: string | null,
-  fuzzy_match: boolean,
-  raise_error: boolean,
+  fuzzyMatch: boolean,
+  throwError: boolean,
   hide: boolean,
-  keep_crlf: boolean,
+  keepCRLF: boolean,
 }
 
 export class CommandMeta implements TCommandMeta {
@@ -24,38 +67,41 @@ export class CommandMeta implements TCommandMeta {
     public usage: string | null = null,
     public examples: string[] = [],
     public author: string | null = null,
-    public fuzzy_match: boolean = false,
-    public raise_error: boolean = false,
+    public fuzzyMatch: boolean = false,
+    public throwError: boolean = false,
     public hide: boolean = false,
-    public keep_crlf: boolean = false,
+    public keepCRLF: boolean = false,
   ) {
     this.description = description;
     this.usage = usage;
     this.examples = examples;
     this.author = author;
-    this.fuzzy_match = fuzzy_match;
-    this.raise_error = raise_error;
+    this.fuzzyMatch = fuzzyMatch;
+    this.throwError = throwError;
     this.hide = hide;
-    this.keep_crlf = keep_crlf;
+    this.keepCRLF = keepCRLF;
   }
 }
 
 export class Command extends Subcommand {
-  headers: Header;
+  headers: THeader;
   command: any;
   namespace: string;
-  formatter_gen: (cmd: Command) => TextFormatter;
+  formatter: TextFormatter;
   _meta: TCommandMeta;
+  _behaviors: Behavior[];
+
   constructor(
     name: any | null = null,
-    headers: Header | null = null,
+    headers: THeader | null = null,
     args: Arg<any>[] | Args = new Args(),
     options: (Option | Subcommand)[] = [],
     action: Action | ((data: any) => any) | null = null,
     meta: TCommandMeta = new CommandMeta(),
     namespace: string | Namespace | null = null,
     separators: string[] = [" "],
-    formatter_gen: ((cmd: Command) => TextFormatter) | null = null
+    formatterType: Constructor<TextFormatter> | null = null,
+    behaviors: Behavior[] | null = null,
   ) {
     if (!namespace) {
       namespace = config.default_namespace;
@@ -70,23 +116,25 @@ export class Command extends Subcommand {
     this.command = name || (this.headers.length > 0 ? "" : "Alconna");
     this.namespace = namespace.name;
     this._meta = meta;
-    this._meta.fuzzy_match = this._meta.fuzzy_match || namespace.fuzzy_match;
-    this._meta.raise_error = this._meta.raise_error || namespace.raise_error;
+    this._meta.fuzzyMatch = this._meta.fuzzyMatch || namespace.fuzzyMatch;
+    this._meta.throwError = this._meta.throwError || namespace.throwError;
     this._options.push(
       new Option(
-        namespace.option_name.help.join("|")
+        namespace.optionName.help.join("|")
         ).help(config.lang.require("builtin.option_help")),
       new Option(
-        namespace.option_name.shortcut.join("|"),
+        namespace.optionName.shortcut.join("|"),
         Args.push("delete;?", "delete")
         .push("name", String)
         .push("command", String, "$")
         ).help(config.lang.require("builtin.option_shortcut")),
       new Option(
-        namespace.option_name.completion.join("|")
+        namespace.optionName.completion.join("|")
         ).help(config.lang.require("builtin.option_completion")),
     )
-    this.formatter_gen = formatter_gen || config.default_namespace.formatter_gen || ((cmd: Command) => {return new TextFormatter(cmd)});
+    this._behaviors = behaviors || [];
+    this._behaviors.splice(0, 0, new ActionHandler(this));
+    this.formatter = new (formatterType || namespace.formatterType || TextFormatter)();
     this.name = `${this.command || this.headers[0]}`.replace(/ALCONNA:/g, "");
     manager.register(this);
   }
@@ -124,24 +172,23 @@ export class Command extends Subcommand {
       //@ts-ignore
       this.headers.push(...namespace.headers)
     }
-    this.formatter_gen = namespace.formatter_gen || this.formatter_gen
     this._options.splice(this._options.length - 3, 3)
     this._options.push(
       new Option(
-        namespace.option_name.help.join("|")
+        namespace.optionName.help.join("|")
         ).help(config.lang.require("builtin.option_help")),
       new Option(
-        namespace.option_name.shortcut.join("|"),
+        namespace.optionName.shortcut.join("|"),
         Args.push("delete;?", "delete")
         .push("name", String)
         .push("command", String, "$")
         ).help(config.lang.require("builtin.option_shortcut")),
       new Option(
-        namespace.option_name.completion.join("|")
+        namespace.optionName.completion.join("|")
         ).help(config.lang.require("builtin.option_completion")),
     )
-    this._meta.fuzzy_match = namespace.fuzzy_match || this._meta.fuzzy_match
-    this._meta.raise_error = namespace.raise_error || this._meta.raise_error
+    this._meta.fuzzyMatch = namespace.fuzzyMatch || this._meta.fuzzyMatch
+    this._meta.throwError = namespace.throwError || this._meta.throwError
     manager.register(this)
     return this
   }
@@ -173,8 +220,13 @@ export class Command extends Subcommand {
     return this;
   }
 
+  resetBehavior(...behaviors: Behavior[]): this {
+    this._behaviors.splice(1, this._behaviors.length, ...behaviors);
+    return this;
+  }
+
   getHelp(): string {
-    return this.formatter_gen(this).format()
+    return this.formatter.format();
   }
 
   parse<T extends DataCollection<any>>(message: T): ParseResult<T> | void {
@@ -182,4 +234,4 @@ export class Command extends Subcommand {
   }
 }
 
-import { ParseResult } from "./result";
+
