@@ -96,7 +96,7 @@ class ValidateResult<TVOrigin> {
 
 class Pattern<TOrigin, TSource = any> {
   regex: RegExp;
-  pattern: string;
+  source: string;
   mode: MatchMode;
   origin: Constructor<TOrigin>;
   converter: (self: this, value: any) => TOrigin | null;
@@ -110,7 +110,7 @@ class Pattern<TOrigin, TSource = any> {
 
   constructor(
     origin: Constructor<TOrigin>,
-    pattern: RegExp | string,
+    source: RegExp | string,
     mode: number | MatchMode = MatchMode.REGEX_MATCH,
     converter: ((self: Pattern<TOrigin, TSource>, value: any) => TOrigin | null) | null = null,
     alias: string | null = null,
@@ -119,16 +119,16 @@ class Pattern<TOrigin, TSource = any> {
     validators: Array<(res: TOrigin) => boolean> | null = null,
     anti: boolean = false
   ) {
-    if (pattern instanceof RegExp) {
-      if (pattern.source.startsWith("^") || pattern.source.endsWith("$"))
-        throw Error(`不允许正则表达式 ${pattern} 头尾部分使用 '^' 或 '$' `)
-      this.pattern = pattern.source;
-      this.regex = new RegExp(`^${pattern.source}$`, pattern.flags);
+    if (source instanceof RegExp) {
+      if (source.source.startsWith("^") || source.source.endsWith("$"))
+        throw Error(`不允许正则表达式 ${source} 头尾部分使用 '^' 或 '$' `)
+      this.source = source.source;
+      this.regex = new RegExp(`^${source.source}$`, source.flags);
     } else {
-      if (pattern.startsWith("^") || pattern.endsWith("$"))
-        throw Error(`不允许正则表达式 ${pattern} 头尾部分使用 '^' 或 '$' `)
-      this.pattern = pattern;
-      this.regex = new RegExp( "^" + pattern + "$");
+      if (source.startsWith("^") || source.endsWith("$"))
+        throw Error(`不允许正则表达式 ${source} 头尾部分使用 '^' 或 '$' `)
+      this.source = source;
+      this.regex = new RegExp( "^" + source + "$");
     }
     this.mode = mode;
     this.origin = origin;
@@ -165,7 +165,7 @@ class Pattern<TOrigin, TSource = any> {
       text = this.alias;
     else {
       if (this.mode == MatchMode.REGEX_MATCH) {
-        text = this.pattern;
+        text = this.source;
       }
       else if (
         this.mode == MatchMode.REGEX_CONVERT ||

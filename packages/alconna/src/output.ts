@@ -92,4 +92,4 @@ class OutputManager {
   }
 }
 
-export const output_manager = new OutputManager();
+export const outputManager = new OutputManager();

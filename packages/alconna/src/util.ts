@@ -3,6 +3,7 @@ export function splitOnce(command: string, sep: string[] = [" "], crlf: boolean 
   let buffer: string[] = [];
   let quote: string | null = null;
   let escape = false;
+  command = command.trimStart()
   for (let i = 0; i < command.length; i++) {
     let char = command[i];
     if (escape) {
@@ -76,7 +77,7 @@ export function split(command: string, sep: string[] = [" "], crlf: boolean = tr
   return result;
 }
 
-export function levenshtein_norm(source: string, target: string): number {
+export function levenshteinNorm(source: string, target: string): number {
   let distance = levenshtein(source, target);
   return 1 - distance / Math.max(source.length, target.length);
 }

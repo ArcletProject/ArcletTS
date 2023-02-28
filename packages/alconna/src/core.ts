@@ -23,9 +23,7 @@ class ActionHandler extends Behavior {
     }
   }
 
-  constructor(
-    source: Command
-  ) {
+  constructor(source: Command) {
     super();
     this.mainAction = source._action;
     this.options = new Map();

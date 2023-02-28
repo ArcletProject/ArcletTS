@@ -16,7 +16,7 @@ export class Regex extends Pattern<RegexGroup | string[], string> {
       throw new MatchFailed(`参数 ${input} 的类型不正确`)
     let mat = this.regex.exec(input)
     if (mat != null) {
-      return mat.groups || mat.slice(0, mat.length)
+      return mat.groups ? Object.assign({}, mat.groups) : mat.slice(0, mat.length)
     }
     throw new MatchFailed(`参数 ${input} 不正确`)
   }
