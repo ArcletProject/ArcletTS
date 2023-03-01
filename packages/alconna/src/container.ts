@@ -1,4 +1,3 @@
-import { Constructor } from "@arcletjs/nepattern";
 import { createHash } from "crypto";
 import { Arg } from "./args";
 import { Option, Subcommand } from "./base";
@@ -132,11 +131,9 @@ export class DataCollectionContainer {
 
   rebuild(...data: any[]):this {
     this.rawData = Array.from(this.bakData)
-    let i = 0
-    while (i < data.length) {
+    for(let i = 0; i < data.length; i++) {
       let d = data[i]
       if (!d) {
-        i++;
         continue;
       }
       if (typeof d == "string" && i > 0 && typeof this.rawData.at(-1) == "string") {
@@ -145,7 +142,6 @@ export class DataCollectionContainer {
         this.rawData.push(d)
         this.nData ++
       }
-      i++
     }
     this.currentIndex = 0
     this.bakData = Array.from(this.rawData)

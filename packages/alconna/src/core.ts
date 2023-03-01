@@ -3,7 +3,7 @@ import { Action, Option, Subcommand, execArgs, execData } from "./base";
 import { Args, Arg } from "./args";
 import { Namespace, config } from "./config";
 import { DataCollection, THeader } from "./typing";
-import { manager } from "./manager";
+import { manager, ShortcutArgs } from "./manager";
 import { TextFormatter } from "./formatter";
 import { ParseResult, Behavior } from "./result";
 import * as path from "path";
@@ -102,7 +102,7 @@ export class Command extends Subcommand {
     behaviors: Behavior[] | null = null,
   ) {
     if (!namespace) {
-      namespace = config.default_namespace;
+      namespace = config.defaultNamespace;
     } else if (namespace instanceof Namespace) {
       namespace = config.setdefault(namespace.name, namespace);
     } else {
@@ -124,7 +124,7 @@ export class Command extends Subcommand {
         namespace.optionName.shortcut.join("|"),
         Args.push("delete;?", "delete")
         .push("name", String)
-        .push("command", String, "$")
+        .push("command", String, "_")
         ).help(config.lang.require("builtin.option_shortcut")),
       new Option(
         namespace.optionName.completion.join("|")
@@ -179,7 +179,7 @@ export class Command extends Subcommand {
         namespace.optionName.shortcut.join("|"),
         Args.push("delete;?", "delete")
         .push("name", String)
-        .push("command", String, "$")
+        .push("command", String, "_")
         ).help(config.lang.require("builtin.option_shortcut")),
       new Option(
         namespace.optionName.completion.join("|")
@@ -225,6 +225,37 @@ export class Command extends Subcommand {
 
   getHelp(): string {
     return this.formatter.format();
+  }
+
+  shortcut(key: string, args?: ShortcutArgs, del: boolean = false) {
+    try {
+      if (del) {
+        manager.deleteShortcut(this, key)
+        return config.lang.replaceKeys("shortcut.delete_success", {shortcut: key, target: this.path})
+      }
+      if (args) {
+        manager.addShortcut(this, key, args)
+        return config.lang.replaceKeys("shortcut.add_success", {shortcut: key, target: this.path})
+      }
+      let cmd = manager.recentMessage
+      if (cmd) {
+        let alc = manager.lastUsing
+        if (alc && alc == this) {
+          manager.addShortcut(this, key, {command: cmd})
+        return config.lang.replaceKeys("shortcut.add_success", {shortcut: key, target: this.path})
+        }
+        throw new Error(config.lang.replaceKeys(
+        "shortcut.recent_command_error",
+        {target: this.path, source: alc?.path || "Unknown"}
+      ))
+      }
+      throw new Error(config.lang.require("shortcut.no_recent_command"))
+    } catch(e) {
+      if (this._meta.throwError) {
+        throw e;
+      }
+      return (<Error>e).message
+    }
   }
 
   parse<T extends DataCollection<any>>(message: T): ParseResult<T> | void {

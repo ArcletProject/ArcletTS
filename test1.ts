@@ -22,3 +22,10 @@ cache.set("d", "d");
 console.log(cache.toString());
 console.log(cache.recent);
 console.log(cache.get("b", "NOT FOUND"));
+
+let alc1 = new Command(
+  "core16",
+  null,
+  Args.push("foo", Number)
+).option("bar", Args.push("baz", String))
+console.log(alc1.shortcut("TEST([0-9]+)(.+)", {args: ["$0"], options: {bar: "$1"}}))

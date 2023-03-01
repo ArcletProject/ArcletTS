@@ -15,12 +15,12 @@ export interface ShortcutArgs {
 class Manager {
   sign: string = "ALCONNA:";
   current_count: number = 0;
-  max_count: number = config.message_max_count;
+  max_count: number = config.messageMaxCount;
   private commands: Map<string, Map<string, Command>> = new Map();
   private analysers: Map<Command, any> = new Map();
   private abandons: Command[] = [];
-  records: LruCache<number, ParseResult<DataCollection<any>>> = new LruCache(config.message_max_count);
-  private shortcuts: LruCache<string, DataCollection<any>> = new LruCache();
+  records: LruCache<number, ParseResult<DataCollection<any>>> = new LruCache(config.messageMaxCount);
+  private shortcuts: LruCache<string, ParseResult<any> | ShortcutArgs> = new LruCache();
 
   get loadedNamespaces(): string[] {
     return Array.from(this.commands.keys())
@@ -29,7 +29,7 @@ class Manager {
   private commandPart(command: string): [string, string] {
     let parts = command.split(":", 1)
     if (parts.length < 2) {
-      parts.splice(0, 0, config.default_namespace.name)
+      parts.splice(0, 0, config.defaultNamespace.name)
     }
     return [parts[0], parts[1]]
   }
@@ -118,6 +118,46 @@ class Manager {
     }
     if (!enabled) {
       this.abandons.push(command)
+    }
+  }
+
+  addShortcut(target: Command, key: string, source: ParseResult<any> | ShortcutArgs) {
+    let [ns, name] = this.commandPart(target.path)
+    if (source instanceof ParseResult) {
+      if (source.matched) {
+        this.shortcuts.set(`${ns}.${name}::${key}`, source)
+      } else {
+        throw new Error(config.lang.replaceKeys("manager.incorrect_shortcut", {target: `${key}`}))
+      }
+    } else {
+      source.command = source.command || target.command || target.name
+      this.shortcuts.set(`${ns}.${name}::${key}`, source)
+    }
+  }
+
+  findShortcut(target: Command): (ParseResult<any>|ShortcutArgs)[];
+  findShortcut(target: Command, query: string): [ParseResult<any>|ShortcutArgs, RegExpMatchArray | null];
+  findShortcut(target: Command, query?: string): (ParseResult<any>|ShortcutArgs)[] | [ParseResult<any>|ShortcutArgs, RegExpMatchArray | null] {
+    let [ns, name] = this.commandPart(target.path)
+    if (query) {
+      let res = this.shortcuts.get(`${ns}.${name}::${query}`)
+      if (res) {
+        return [res, null]
+      }
+      for (let key of this.shortcuts.keys()) {
+        let mat = query.match(key.split("::")[1])
+        if (mat) {
+          return [this.shortcuts.get(key)!, mat]
+        }
+      }
+      throw new Error(config.lang.replaceKeys("manager.target_command_error", {target: `${ns}.${name}`}))
+    }
+    return Array.from(this.shortcuts.keys()).filter((v) => v.includes(`${ns}.${name}`)).map((v)=>this.shortcuts.get(v)!)
+  }
+
+  deleteShortcut(target: Command, key?: string) {
+    for (let res of (key? [this.findShortcut(target, key)[0]] : this.findShortcut(target))) {
+      this.shortcuts.delete(Array.from(this.shortcuts.keys()).filter((v)=>(this.shortcuts.get(v)! == res))[0])
     }
   }
 

@@ -16,6 +16,7 @@ export class Namespace {
     public formatterType: Constructor<any> | null = null,
     public fuzzyMatch: boolean = false,
     public throwError: boolean = false,
+    public enableMessageCache: boolean = true,
     public optionName: OptionNames = {
       help: ["--help", "-h"],
       shortcut: ["--shortcut", "-s"],
@@ -28,6 +29,7 @@ export class Namespace {
     this.formatterType = formatterType;
     this.fuzzyMatch = fuzzyMatch;
     this.throwError = throwError;
+    this.enableMessageCache = enableMessageCache;
     this.optionName = optionName;
   }
 
@@ -43,7 +45,7 @@ export class Namespace {
 
 class Lang {
   public path = `${__dirname}/../lang/default.json`;
-  private file: object;
+  private readonly file: object;
   private config: { [key: string]: string };
 
   constructor() {
@@ -120,17 +122,17 @@ class Lang {
 
 class AlconnaConfig {
   lang: Lang = new Lang();
-  command_max_count: number = 200;
-  message_max_count: number = 100;
-  fuzzy_threshold: number = 0.6;
+  commandMaxCount: number = 200;
+  messageMaxCount: number = 100;
+  fuzzyThreshold: number = 0.6;
   _default_namespace: string = "Alconna";
   namespace: { [np: string]: Namespace } = {Alconna: new Namespace("Alconna")};
 
-  get default_namespace(): Namespace {
+  get defaultNamespace(): Namespace {
     return this.namespace[this._default_namespace];
   }
 
-  set default_namespace(ns: string | Namespace) {
+  set defaultNamespace(ns: string | Namespace) {
     if (typeof ns == "string") {
       if (!(ns in this.namespace)) {
         let old = this.namespace[this._default_namespace];
@@ -163,13 +165,12 @@ export const load_lang = config.lang.reload;
 export function withNamespace(name: string | Namespace, callbackFn: (ns: Namespace) => void) {
   let ns = name instanceof Namespace ? name : new Namespace(name);
   let nm = ns.name;
-  let old = config.default_namespace;
-  config.default_namespace = ns;
+  let old = config.defaultNamespace;
+  config.defaultNamespace = ns;
   callbackFn(ns);
-  config.default_namespace = old;
+  config.defaultNamespace = old;
   config.namespace[nm] = ns;
   return ns;
 }
 
-import { Command } from "./core";
-import { TextFormatter } from "./formatter";
+//import { TextFormatter } from "./formatter";

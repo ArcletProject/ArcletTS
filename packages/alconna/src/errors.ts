@@ -99,16 +99,6 @@ export class FuzzyMatchSuccess extends Error {
   }
 }
 
-/**
- * 补全触发
- */
-export class CompletionTriggered extends Error {
-
-  constructor(message: string) {
-    super(message);
-    this.name = "CompletionTriggered";
-  }
-}
 
 /**
  * 解析状态保存触发
@@ -124,8 +114,9 @@ export class PauseTriggered extends Error {
  * 内置选项解析触发
  */
 export class SpecialOptionTriggered extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(public handler: (...args: any[]) => any) {
+    super("SpecialOptionTriggered");
+    this.handler = handler;
     this.name = "SpecialOptionTriggered";
   }
 }

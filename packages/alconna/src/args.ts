@@ -253,4 +253,8 @@ export class Args {
   get empty(): boolean {
     return this.argument.length < 1;
   }
+
+  get(name: string): Arg<any> | null {
+    return this.argument.find((x) => x.name == name) || null;
+  }
 }

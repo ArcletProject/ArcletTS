@@ -1,6 +1,6 @@
-import { Pattern } from "@arcletjs/nepattern";
+import { Pattern, Constructor } from "@arcletjs/nepattern";
 import { manager, ShortcutArgs } from "./manager";
-import { ParamsUnmatched, ArgumentMissing, FuzzyMatchSuccess, CompletionTriggered, PauseTriggered, SpecialOptionTriggered, NullMessage } from "./errors";
+import { ParamsUnmatched, ArgumentMissing, FuzzyMatchSuccess, PauseTriggered, SpecialOptionTriggered, NullMessage } from "./errors";
 import { Args } from "./args";
 import { handleHeader, Pair, Double } from "./header";
 import { Option, Subcommand } from "./base";
@@ -10,6 +10,7 @@ import { DataCollection } from "./typing";
 import { config, Namespace } from "./config";
 import { outputManager } from "./output";
 import { DataCollectionContainer } from "./container";
+import { handleHelp, handleShortcut } from "./handlers";
 
 export class SubAnalyser<T extends DataCollectionContainer = DataCollectionContainer> {
   command: Subcommand;
@@ -55,13 +56,13 @@ export class SubAnalyser<T extends DataCollectionContainer = DataCollectionConta
     this.container.reset();
     this.special = new Map()
     for (let key of namespace.optionName.help) {
-      //this.special.set(key, handleHelp);
+      this.special.set(key, handleHelp);
     }
     for (let key of namespace.optionName.completion) {
       //this.special.set(key, handleCompletion);
     }
     for (let key of namespace.optionName.shortcut) {
-      //this.special.set(key, handleShortcut);
+      this.special.set(key, handleShortcut);
     }
     this.completionNames = namespace.optionName.completion;
     this.selfArgs = this.command.args;
@@ -103,6 +104,41 @@ export class SubAnalyser<T extends DataCollectionContainer = DataCollectionConta
 
 
 export class Analyser<TC extends DataCollectionContainer = DataCollectionContainer, TD extends DataCollection<any> = DataCollection<any>> extends SubAnalyser<TC> {
+  command: Command;
+  usedTokens: Set<number>;
+  commandHeader: RegExp | Pattern<any> | Pair[] | Double;
+  private static globalContainerType: Constructor<DataCollectionContainer> = DataCollectionContainer;
+
+  static defaultContainer<_TC extends DataCollectionContainer = DataCollectionContainer>(t: Constructor<_TC>): typeof Analyser<_TC> {
+    Analyser.globalContainerType = t;
+    return Analyser;
+  }
+
+  constructor(
+    command: Command,
+    containerType: Constructor<TC> | null = null
+  ) {
+    let construct = containerType || Analyser.globalContainerType;
+    super(
+      command,
+      new construct(
+      new Map(), "text", command.separators, [], true, !command._meta.keepCRLF, command.nsConfig.enableMessageCache,
+      ),
+      command.nsConfig
+    )
+    this.command = command;
+    this.fuzzyMatch = command._meta.fuzzyMatch;
+    this.usedTokens = new Set();
+    this.commandHeader = handleHeader(command.command, command.headers)
+  }
+
+  converter(command: string): TD {
+    return <TD><unknown>command
+  }
+
+  toString() {
+    return `<${this.constructor.name} of ${this.command.path}>`
+  }
 }
 
 
