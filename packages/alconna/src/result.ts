@@ -172,8 +172,8 @@ export class ParseResult<T extends DataCollection<any>> {
 
   encapsulate(
     mainArgs: Map<string, any>,
-    options: Dict<OptionResult>,
-    subcommands: Dict<SubcommandResult>,
+    options: Map<string, OptionResult>,
+    subcommands: Map<string, SubcommandResult>,
   ) {
     this.mainArgs = new Map(mainArgs);
     this.options = new Map(Object.entries(options));

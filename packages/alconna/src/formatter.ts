@@ -149,65 +149,70 @@ export class TextFormatter {
     }
   }
 
-  format(end: any[] | null = null) {
-    function handle(traces: Trace[]) {
-      let trace = traces[0].union(traces.slice(1));
-      if (!end || end.length == 0 || end[0] == "") {
-        return trace;
-      }
-      let _cache: any = resolveRequires(trace.body);
-      let _parts: string[] = [];
-      for (let part of end) {
-        if (_cache instanceof Map && _cache.has(part)) {
-          _cache = <any>_cache.get(part)!;
-          _parts.push(part);
-        }
-      }
-      if (_parts.length == 0) {
-        return trace;
-      }
-      if (_cache instanceof Map) {
-        let ensure = ensure_node(_parts[_parts.length - 1], trace.body);
-        if (ensure) {
-          _cache = ensure;
-        } else {
-          let _opts: (Option | Subcommand)[] = [];
-          let _visited: Set<any> = new Set();
-          for (let [key, value] of _cache) {
-            if (value instanceof Map) {
-              _opts.push(new Option(key).require(..._parts));
-            } else if (!_visited.has(value)) {
-              _opts.push(value);
-              _visited.add(value);
-            }
-          }
-          return new Trace(
-            {name: _parts.at(-1)!, header: [], description: _parts.at(-1)!, usage: null, examples: null},
-            new Args(),
-            trace.separators,
-            _opts
-          )
-        }
-      }
-      if (_cache instanceof Option) {
-        return new Trace(
-          {name: _cache.name, header: [], description: _cache.help_text, usage: null, examples: null},
-          _cache.args,
-          _cache.separators, []
-        )
-      }
-      if (_cache instanceof Subcommand) {
-        return new Trace(
-          {name: _cache.name, header: [], description: _cache.help_text, usage: null, examples: null},
-          _cache.args,
-          _cache.separators,
-          _cache._options
-        )
-      }
+  private handle(traces: Trace[], end: any[] | null = null) {
+    let trace = traces[0].union(traces.slice(1));
+    if (!end || end.length == 0 || end[0] == "") {
       return trace;
     }
+    let _cache: any = resolveRequires(trace.body);
+    let _parts: string[] = [];
+    for (let part of end) {
+      if (_cache instanceof Map && _cache.has(part)) {
+        _cache = <any>_cache.get(part)!;
+        _parts.push(part);
+      }
+    }
+    if (_parts.length == 0) {
+      return trace;
+    }
+    if (_cache instanceof Map) {
+      let ensure = ensure_node(_parts[_parts.length - 1], trace.body);
+      if (ensure) {
+        _cache = ensure;
+      } else {
+        let _opts: (Option | Subcommand)[] = [];
+        let _visited: Set<any> = new Set();
+        for (let [key, value] of _cache) {
+          if (value instanceof Map) {
+            _opts.push(new Option(key).require(..._parts));
+          } else if (!_visited.has(value)) {
+            _opts.push(value);
+            _visited.add(value);
+          }
+        }
+        return new Trace(
+          {name: _parts.at(-1)!, header: [], description: _parts.at(-1)!, usage: null, examples: null},
+          new Args(),
+          trace.separators,
+          _opts
+        )
+      }
+    }
+    if (_cache instanceof Option) {
+      return new Trace(
+        {name: _cache.name, header: [], description: _cache.helpText, usage: null, examples: null},
+        _cache.args,
+        _cache.separators, []
+      )
+    }
+    if (_cache instanceof Subcommand) {
+      return new Trace(
+        {name: _cache.name, header: [], description: _cache.helpText, usage: null, examples: null},
+        _cache.args,
+        _cache.separators,
+        _cache._options
+      )
+    }
+    return trace;
+  }
 
-    return Array.from(this.data.values()).map(handle).map(this.entry).join("\n");
+  format(end: any[] | null = null) {
+    let nodes: string[] = [];
+    for(let [key, value] of this.data) {
+      nodes.push(this.entry(this.handle(value, end)));
+    }
+
+    return nodes.join("\n");
   }
 
   entry(trace: Trace): string {
@@ -224,7 +229,7 @@ export class TextFormatter {
       if (arg.value == AllParam) {
         return `<...${name}>`;
       }
-      if (!(arg.value instanceof Pattern) || arg.value.pattern != name) {
+      if (!(arg.value instanceof Pattern) || arg.value.source != name) {
         argp += `:${arg.value}`;
       }
       if (arg.field.display == Empty) {
@@ -269,7 +274,7 @@ export class TextFormatter {
       let option_string = node._options.map((v) => (this.part(v).replace(/\n/g, "\n "))).join("")
       let option_help = option_string ? "## 该子命令内可用的选项有:\n " : ""
       return (
-        `# ${node.help_text}\n` +
+        `# ${node.helpText}\n` +
         `  ${name}${node.separators[0]}` +
         `${this.parameters(node.args)}\n` +
         `${option_help}${option_string}`
@@ -278,7 +283,7 @@ export class TextFormatter {
     if (node instanceof Option) {
       let alias = node.requires.join(" ") + (node.requires.length > 0 ? " " : "") + node.aliases.join(", ");
       return (
-        `# ${node.help_text}\n` +
+        `# ${node.helpText}\n` +
         `  ${alias}${node.separators[0]}` +
         `${this.parameters(node.args)}\n`
       )

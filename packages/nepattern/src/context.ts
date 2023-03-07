@@ -44,7 +44,7 @@ export class Patterns extends Map<any, Pattern<any>> {
 
   merge(patterns: Patterns) {
     for (let [k, v] of patterns) {
-      this.add(v, k)
+      this.set(k, v)
     }
   }
 

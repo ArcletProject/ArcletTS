@@ -1,10 +1,10 @@
-import { AllParam, Pattern, Empty } from "@arcletjs/nepattern";
+import { AllParam, Pattern, Empty, Ellipsis } from "@arcletjs/nepattern";
 import {Arg, Args} from "./args";
 import { Double } from "./header";
 import { Option, Subcommand } from "./base";
 import { config } from "./config";
 import { ArgumentMissing, FuzzyMatchSuccess, ParamsUnmatched, SpecialOptionTriggered} from "./errors";
-import { OptionResult, Sentence } from "./model";
+import { HeadResult, OptionResult, Sentence } from "./model";
 import { outputManager } from "./output";
 import { KeyWordVar, MultiVar} from "./typing";
 import { levenshteinNorm, splitOnce} from "./util";
@@ -238,7 +238,7 @@ export function analyseArgs(
     }
     result.set("$varargs", [varargs, args.varPositional!])
   }
-  if (args.keywordOnly) {
+  if (args.keywordOnly.length > 0) {
     let res = new Map()
     for (let [key, val] of result.entries()) {
       if (args.keywordOnly!.includes(key)) {
@@ -249,6 +249,181 @@ export function analyseArgs(
   }
   return result
 }
+
+
+export function analyseUnmatchParams(analyser: SubAnalyser, text: string) {
+  for (let param of analyser.compileParams.values()) {
+    if (param instanceof Array) {
+      let res: Option[] = []
+      for (let opt of param) {
+        let mayParam = splitOnce(text, opt.separators)[0]
+        if (opt.aliases.includes(mayParam) || opt.aliases.some((alias) => mayParam.startsWith(alias))) {
+          res.push(opt)
+          continue;
+        }
+        if (analyser.fuzzyMatch && levenshteinNorm(mayParam, opt.name) >= config.fuzzyThreshold) {
+          throw new FuzzyMatchSuccess(config.lang.replaceKeys("common.fuzzy_matched", {source: mayParam, target: opt.name}))
+        }
+      }
+      if (res.length > 0) {
+        return res;
+      }
+    } else if (param instanceof Sentence) {
+      let mayParam = splitOnce(text, param.separators)[0];
+      if (mayParam == param.name) {
+        return param
+      }
+      if (analyser.fuzzyMatch && levenshteinNorm(mayParam, param.name) >= config.fuzzyThreshold) {
+        throw new FuzzyMatchSuccess(config.lang.replaceKeys("common.fuzzy_matched", {source: mayParam, target: param.name}))
+      }
+    } else {
+      let mayParam = splitOnce(text, param.command.separators)[0]
+      if (mayParam == param.command.name || mayParam.startsWith(param.command.name)) {
+        return param
+      }
+      if (analyser.fuzzyMatch && levenshteinNorm(mayParam, param.command.name) >= config.fuzzyThreshold) {
+        throw new FuzzyMatchSuccess(config.lang.replaceKeys("common.fuzzy_matched", {source: mayParam, target: param.command.name}))
+      }
+    }
+  }
+  return null;
+}
+
+
+export function analyseOption(analyser: SubAnalyser, param: Option): [string, OptionResult] {
+  analyser.container.context = param;
+  if (param.requires.length > 0 && !param.requires.every(r => analyser.sentences.includes(r))) {
+    throw new ParamsUnmatched(`${param.name}'s requires not satisfied ${analyser.sentences.join(" ")}`)
+  }
+  analyser.sentences = [];
+  if (param.isCompact) {
+    let name: string = analyser.container.popitem()[0];
+    let match = false
+    for (let al of param.aliases) {
+      let mat = name.match(new RegExp(`${al}(?<rest>.*)`))
+      if (mat) {
+        analyser.container.pushback(mat.groups!['rest'], true)
+        match = true;
+        break;
+      }
+    }
+    if (!match) {
+      throw new ParamsUnmatched(`${name} does not match with ${param.name}`)
+    }
+  } else {
+    let [name, _] = analyser.container.popitem(param.separators);
+    if (!param.aliases.includes(name)) {
+      throw new ParamsUnmatched(`${name} does not match with ${param.name}`)
+    }
+  }
+  let name = param._dest;
+  if (param.nargs == 0) {
+    return [name, new OptionResult()]
+  }
+  return [name, new OptionResult(null, analyseArgs(analyser, param.args, param.nargs))]
+}
+
+export function analyseParam(analyser: SubAnalyser, text: any, isStr: boolean) {
+  if (isStr && analyser.special.has(text)) {
+    throw new SpecialOptionTriggered(analyser.special.get(text)!)
+  }
+  let param: Option[] | Sentence | SubAnalyser | typeof Ellipsis | null;
+  if (!isStr || !text) {
+    param = Ellipsis;
+  } else if (analyser.compileParams.has(text)) {
+    param = analyser.compileParams.get(text)!
+  } else {
+    param = (analyser.container.defaultSeparate ? null : analyseUnmatchParams(analyser, text))
+  }
+  if ((!param || param == Ellipsis) && analyser.argsResult.size < 1) {
+    analyser.argsResult = analyseArgs(analyser, analyser.selfArgs, analyser.command.nargs)
+  } else if (param instanceof Array) {
+    let match = false
+    let err: Error = new Error("null")
+    for (let opt of param) {
+      let sets = analyser.container.dataSet()
+      try {
+        let [optN, optV] = analyseOption(analyser, opt)
+        analyser.optionResults.set(optN, optV)
+        match = true;
+        break;
+      } catch (e) {
+        err = e as Error;
+        analyser.container.dataReset(...sets)
+        continue;
+      }
+    }
+    if(!match) {
+      throw err;
+    }
+  } else if (param instanceof Sentence) {
+    analyser.sentences.push(analyser.container.popitem()[0])
+  } else if (param !== null && param !== Ellipsis) {
+    if (!analyser.subcommandResults.has(param.command._dest)) {
+      analyser.subcommandResults.set(param.command._dest, param.process().export())
+    }
+  }
+}
+
+
+export function analyseHeader(analyser: Analyser): HeadResult {
+  let hdr = analyser.commandHeader;
+  let [prefix, isStr] = analyser.container.popitem()
+  if (hdr instanceof RegExp && isStr) {
+    let mat = hdr.exec(prefix)
+    if (mat) {
+      return new HeadResult(prefix, prefix, true, Object.assign({}, mat.groups!))
+    }
+  }
+  if (hdr instanceof Pattern) {
+    let val = hdr.exec(prefix, Empty)
+    if (val.isSuccess()) {
+      return new HeadResult(prefix, val.value, true)
+    }
+  }
+  let [command, mStr] = analyser.container.popitem()
+  if (hdr instanceof Array && mStr) {
+    for (let pair of hdr) {
+      let res = pair.match(prefix, command)
+      if (res) {
+        return new HeadResult(...res)
+      }
+    }
+  }
+  if (hdr instanceof Double) {
+    let res = hdr.match(prefix, command, isStr, mStr, analyser.container.pushback)
+    if (res) {
+      return new HeadResult(...res)
+    }
+  }
+  if (isStr && analyser.fuzzyMatch) {
+    let headerTexts: string[] = []
+    if (analyser.command.headers.length > 0 && analyser.command.headers[0] != "") {
+      analyser.command.headers.forEach((v) => headerTexts.push(`${v}${analyser.command.command}`))
+    } else if (analyser.command.command) {
+      headerTexts.push(`${analyser.command.command}`)
+    }
+    let source: string
+    if (hdr instanceof RegExp || hdr instanceof Pattern) {
+      source = prefix;
+    } else {
+      source = prefix + analyser.container.separators[0] + `${command}`
+    }
+    if (source == analyser.command.command) {
+      analyser.headResult = new HeadResult(source, source, false)
+      throw new ParamsUnmatched(config.lang.replaceKeys("header.error", {target: prefix}))
+    }
+    for (let ht of headerTexts) {
+      if (levenshteinNorm(source, ht) >= config.fuzzyThreshold) {
+        analyser.headResult = new HeadResult(source, ht, true)
+        throw new FuzzyMatchSuccess(config.lang.replaceKeys("common.fuzzy_matched", {target: source, source: ht}))
+      }
+    }
+
+  }
+  throw new ParamsUnmatched(config.lang.replaceKeys("header.error", {target: prefix}))
+}
+
 
 export function handleHelp(analyser: Analyser) {
   let helpParam = analyser.container

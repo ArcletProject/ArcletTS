@@ -8,7 +8,6 @@ import { Dict } from "@arcletjs/nepattern";
 export interface ShortcutArgs {
   command?: DataCollection<any>;
   args?: any[];
-  options?: Dict<any>;
 }
 
 
@@ -17,7 +16,7 @@ class Manager {
   current_count: number = 0;
   max_count: number = config.messageMaxCount;
   private commands: Map<string, Map<string, Command>> = new Map();
-  private analysers: Map<Command, any> = new Map();
+  private analysers: Map<Command, Analyser> = new Map();
   private abandons: Command[] = [];
   records: LruCache<number, ParseResult<DataCollection<any>>> = new LruCache(config.messageMaxCount);
   private shortcuts: LruCache<string, ParseResult<any> | ShortcutArgs> = new LruCache();
@@ -27,7 +26,7 @@ class Manager {
   }
 
   private commandPart(command: string): [string, string] {
-    let parts = command.split(":", 1)
+    let parts = command.split(":")
     if (parts.length < 2) {
       parts.splice(0, 0, config.defaultNamespace.name)
     }
@@ -45,7 +44,7 @@ class Manager {
       throw new ExceedMaxCount("")
     }
     this.analysers.delete(command);
-    this.analysers.set(command, {})
+    this.analysers.set(command, command.compile())
     let namespace: Map<string, Command>
     if (this.commands.has(command.namespace)) {
       namespace = this.commands.get(command.namespace)!
@@ -54,16 +53,34 @@ class Manager {
       this.commands.set(command.namespace, namespace)
     }
     if (!namespace.has(command.name)) {
+      command.formatter.add(command);
       namespace.set(command.name, command);
       this.current_count++;
+    } else {
+      if (namespace.get(command.name)! == command) {
+        return;
+      }
+      let _cmd = namespace.get(command.name)!
+      _cmd.formatter.add(command);
+      command.formatter = _cmd.formatter;
     }
   }
 
-  require(command: Command): any {
+  require<T extends Analyser>(command: Command<T>): T {
     if (this.analysers.has(command)) {
-      return this.analysers.get(command)!
+      return <T>this.analysers.get(command)!
     }
     throw new Error(config.lang.replaceKeys("manager.undefined_command", {target: `${command.path}`}))
+  }
+
+  requires(...path: string[]): Analyser[] {
+    let res: Analyser[] = [];
+    for (let [k, v] of this.analysers.entries()) {
+      if (path.includes(k.path)) {
+        res.push(v)
+      }
+    }
+    return res;
   }
 
   delete(command: Command | string) {
@@ -71,7 +88,9 @@ class Manager {
     if (this.commands.has(ns)) {
       let base = this.commands.get(ns)!;
       if (base.has(name)) {
-        this.analysers.delete(base.get(name)!)
+        let _cmd = base.get(name)!
+        _cmd.formatter.remove(_cmd)
+        this.analysers.delete(_cmd)
         base.delete(name);
         this.current_count--;
       }
@@ -81,7 +100,7 @@ class Manager {
     }
   }
 
-  get(command: string): Command {
+  get(command: string) {
     let [ns, name] = this.commandPart(command)
     if (this.commands.has(ns)) {
       let base = this.commands.get(ns)!;
@@ -110,14 +129,17 @@ class Manager {
   }
 
   setEnabled(command: Command | string, enabled: boolean) {
+    let cmd: Command;
     if (typeof command == "string") {
-      command = this.get(command)
+      cmd = this.get(command)
+    } else {
+      cmd = command
     }
     if (enabled) {
-      this.abandons = this.abandons.filter(item => item != command)
+      this.abandons = this.abandons.filter(item => item != cmd)
     }
     if (!enabled) {
-      this.abandons.push(command)
+      this.abandons.push(cmd)
     }
   }
 
@@ -163,7 +185,7 @@ class Manager {
 
   broadcast<T extends DataCollection<any>>(message: T, namespace: string | Namespace = ""): ParseResult<T> | void {
     for (let command of this.gets(namespace)) {
-      let res = command.parse(message)
+      let res = (command as Command<Analyser, T>).parse(message)
       if (res) {
         return res
       }
@@ -271,4 +293,5 @@ class Manager {
 export const manager = new Manager();
 
 import {Command, TCommandMeta} from "./core";
+import { Analyser } from "./analyser";
 import { ParseResult } from "./result";

@@ -30,8 +30,8 @@
     "optparse"
   ],
   "scripts": {
-    "compile:cjs": "esbuild src/index.ts --outfile=lib/index.cjs --bundle --sourcemap --platform=node --target=es2019",
-    "compile:esm": "esbuild src/index.ts --outfile=lib/index.mjs --bundle --sourcemap --platform=node --target=esnext",
+    "compile:cjs": "esbuild src/index.ts --outfile=lib/index.cjs --bundle --platform=node --target=es2019 --external:@arcletjs/nepattern",
+    "compile:esm": "esbuild src/index.ts --outfile=lib/index.mjs --bundle --platform=node --target=esnext --external:@arcletjs/nepattern",
     "build": "yarn compile:cjs && yarn compile:esm && dtsc"
   },
   "dependencies": {

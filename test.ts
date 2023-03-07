@@ -1,4 +1,4 @@
-import { Pattern, PatternMode } from "@arcletjs/nepattern/lib";
+import { Pattern, MatchMode } from "@arcletjs/nepattern/lib";
 
 class A {
   name: string
@@ -26,7 +26,7 @@ console.log(a_pat.exec(b))
 let INTEGER: Pattern<number> = new Pattern(
   Number,
   "\-?[0-9]+",
-  PatternMode.REGEX_CONVERT,
+  MatchMode.REGEX_CONVERT,
   (_, x) => { return Number(x) },
   "int"
 )
@@ -34,7 +34,7 @@ let INTEGER: Pattern<number> = new Pattern(
 let NUMBER: Pattern<number> = new Pattern(
   Number,
   "\-?[0-9]+\.?[0-9]*",
-  PatternMode.TYPE_CONVERT,
+  MatchMode.TYPE_CONVERT,
   (_, x) => { return Number(x) },
   "number",
 )

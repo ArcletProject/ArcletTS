@@ -6,7 +6,10 @@ import { DataCollection, THeader } from "./typing";
 import { manager, ShortcutArgs } from "./manager";
 import { TextFormatter } from "./formatter";
 import { ParseResult, Behavior } from "./result";
+import { Analyser, TADC } from "./analyser";
+
 import * as path from "path";
+import { PauseTriggered } from "./errors";
 
 class ActionHandler extends Behavior {
   private readonly mainAction: Action | null;
@@ -81,14 +84,25 @@ export class CommandMeta implements TCommandMeta {
   }
 }
 
-export class Command extends Subcommand {
+
+
+
+export class Command<T extends Analyser = Analyser, TD extends DataCollection = TADC<T>> extends Subcommand {
   headers: THeader;
   command: any;
   namespace: string;
   formatter: TextFormatter;
   _meta: TCommandMeta;
   _behaviors: Behavior[];
+  analyserType: Constructor<T>;
+  union: Set<string>;
 
+  private static globalAnalyserType: Constructor<Analyser> = Analyser;
+
+  static defaultAnalyser<_T extends Analyser = Analyser>(type: Constructor<Analyser>): typeof Command<_T> {
+    Command.globalAnalyserType = type;
+    return Command;
+  }
   constructor(
     name: any | null = null,
     headers: THeader | null = null,
@@ -98,6 +112,7 @@ export class Command extends Subcommand {
     meta: TCommandMeta = new CommandMeta(),
     namespace: string | Namespace | null = null,
     separators: string[] = [" "],
+    analyserType: Constructor<T> | null = null,
     formatterType: Constructor<TextFormatter> | null = null,
     behaviors: Behavior[] | null = null,
   ) {
@@ -113,6 +128,7 @@ export class Command extends Subcommand {
     this.headers = headers || Array.from(namespace.headers);
     this.command = name || (this.headers.length > 0 ? "" : "Alconna");
     this.namespace = namespace.name;
+    this.analyserType = analyserType || Command.globalAnalyserType;
     this._meta = meta;
     this._meta.fuzzyMatch = this._meta.fuzzyMatch || namespace.fuzzyMatch;
     this._meta.throwError = this._meta.throwError || namespace.throwError;
@@ -135,6 +151,7 @@ export class Command extends Subcommand {
     this.formatter = new (formatterType || namespace.formatterType || TextFormatter)();
     this.name = `${this.command || this.headers[0]}`.replace(/ALCONNA:/g, "");
     manager.register(this);
+    this.union = new Set();
   }
 
   meta(data: CommandMeta): this
@@ -154,6 +171,11 @@ export class Command extends Subcommand {
 
   get nsConfig() {
     return config.namespace[this.namespace];
+  }
+
+  compile(): T {
+    //@ts-ignore
+    return Analyser.compile(this)
   }
 
   resetNamespace(ns: string | Namespace, header: boolean = true): this {
@@ -258,9 +280,46 @@ export class Command extends Subcommand {
     }
   }
 
-  parse<T extends DataCollection<any>>(message: T): ParseResult<T> | void {
-    let ana = manager.require(this)
+  unionWith(...commands: Command[]): this {
+    commands.forEach(cmd => {this.union.add(cmd.path)})
+    return this;
+  }
+
+  private _parse(message: TD, interrupt: boolean = false): ParseResult<TD> {
+    if (this.union.size > 0) {
+      for (let ana of manager.requires(...this.union)) {
+        ana.container.build(message);
+        let res = ana.process(null, interrupt);
+        if (res.matched) {
+          return res as ParseResult<TD>;
+        }
+      }
+    }
+    //@ts-ignore
+    let analyser = manager.require(this)
+    analyser.container.build(message);
+    return analyser.process(null, interrupt) as ParseResult<TD>;
+  }
+
+  parse(message: TD): ParseResult<TD>;
+  parse(message: TD, interrupt: true): ParseResult<TD> | T;
+  parse(message: TD, interrupt: boolean = false): any {
+    let arp: ParseResult<TD>;
+    try {
+      arp = this._parse(message, interrupt);
+    } catch(e) {
+      if (e instanceof PauseTriggered) {
+        return e.ana as T;
+      }
+      throw e;
+    }
+    if (arp.matched) {
+      this._behaviors[0].execute(arp);
+      arp = arp.execute();
+    }
+    return arp;
   }
 }
+
 
 

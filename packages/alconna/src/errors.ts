@@ -104,9 +104,10 @@ export class FuzzyMatchSuccess extends Error {
  * 解析状态保存触发
  */
 export class PauseTriggered extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(public ana: any) {
+    super("PauseTriggered");
     this.name = "PauseTriggered";
+    this.ana = ana;
   }
 }
 

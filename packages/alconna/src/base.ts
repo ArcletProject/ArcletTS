@@ -105,10 +105,10 @@ export class CommandNode {
   args: Args;
   separators: string[];
   _action: Action | null;
-  help_text: string;
+  helpText: string;
   requires: string[];
   nargs: number;
-  is_compact: boolean;
+  isCompact: boolean;
 
   constructor(
     name: string,
@@ -134,9 +134,9 @@ export class CommandNode {
     this._action = Action.ensure(action);
     this.separators = typeof separators == "string" ? [separators] : Array.from(separators);
     this.nargs = this.args.length;
-    this.is_compact = this.separators.length == 1 && this.separators[0] == "";
+    this.isCompact = this.separators.length == 1 && this.separators[0] == "";
     this._dest = (dest || (this.requires.length > 0 ? this.requires.join("_") + "_" + this.name : this.name)).replace(/^-+/, "");
-    this.help_text = help || this._dest;
+    this.helpText = help || this._dest;
   }
   separate(...seps: string[]):this {
     this.separators = seps;
@@ -152,7 +152,7 @@ export class CommandNode {
   }
 
   help(text: string): this {
-    this.help_text = text;
+    this.helpText = text;
     return this;
   }
 

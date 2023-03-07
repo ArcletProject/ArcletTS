@@ -78,7 +78,7 @@ export class Double {
   ) {
     if (this.prefix && prefixStr) {
       if (commandStr) {
-        let pat = new RegExp(`^${this.prefix.source}${this.command.source}$`, "g");
+        let pat = new RegExp(`^${this.prefix.source}${this.command.source}$`);
         let mat = command.match(pat);
         if (mat) {
           pushbackfn(command);
@@ -154,7 +154,7 @@ export function handleHeader(
   if (headers[0] instanceof Array && headers[0].length == 2) {
     let pairs: Pair[] = [];
     for (let [prefix, command] of headers) {
-      let pat = new RegExp(`${regEscape(command)}${cmdString}`, "g");
+      let pat = new RegExp(`${regEscape(command)}${cmdString}`);
       pairs.push(new Pair(prefix, pat));
     }
     return pairs;
@@ -173,10 +173,10 @@ export function handleHeader(
   }
   if (elements.length == 0 && patterns.length == 0) {
     if (cmd instanceof RegExp) {
-      return new RegExp(`(?:${text.slice(0, text.length - 1)})${cmdString}`, "g");
+      return new RegExp(`(?:${text.slice(0, text.length - 1)})${cmdString}`);
     }
     cmd.source = `(?:${text.slice(0, text.length - 1)})${cmd.source}`;
-    cmd.regex = new RegExp(cmd.source, "g");
+    cmd.regex = new RegExp(cmd.source);
     return cmd;
   }
   return new Double(

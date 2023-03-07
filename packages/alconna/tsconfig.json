@@ -5,6 +5,6 @@
     "outFile": "lib/index.d.ts",
   },
   "include": [
-    "src"
+    "src/**/*"
   ],
 }

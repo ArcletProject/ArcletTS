@@ -22,6 +22,7 @@ export class Namespace {
       shortcut: ["--shortcut", "-s"],
       completion: ["--comp", "-c"]
     },
+    public toText: (unit: any) => string | null = (unit) => { return typeof unit == "string" ? unit : null; },
   ) {
     this.name = name;
     this.headers = headers;
@@ -31,6 +32,7 @@ export class Namespace {
     this.throwError = throwError;
     this.enableMessageCache = enableMessageCache;
     this.optionName = optionName;
+    this.toText = toText;
   }
 
   equals(other: Namespace): boolean {

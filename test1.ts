@@ -28,4 +28,4 @@ let alc1 = new Command(
   null,
   Args.push("foo", Number)
 ).option("bar", Args.push("baz", String))
-console.log(alc1.shortcut("TEST([0-9]+)(.+)", {args: ["$0"], options: {bar: "$1"}}))
+console.log(alc1.shortcut("TEST([0-9]+)(.+)", {args: ["{0}", "bar {1}"]}))

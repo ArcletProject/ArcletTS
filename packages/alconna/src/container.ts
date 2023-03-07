@@ -8,7 +8,7 @@ import { splitOnce, split } from "./util";
 
 const cache: Map<string, Map<string, any>> = new Map();
 
-export class DataCollectionContainer {
+export class DataCollectionContainer<DC extends DataCollection<any> = DataCollection<any>> {
   context: Arg<any> | Subcommand | Option | null;
   currentIndex: number;
   nData: number;
@@ -19,7 +19,7 @@ export class DataCollectionContainer {
 
   constructor(
     public preprocessors: Map<string, (_:any)=>any> = new Map(),
-    public textSign: string = "text",
+    public toText: (unit: any) => string | null = (unit: any) => {return typeof unit === "string" ? unit : null},
     public separators: string[] = [" "],
     public filterOut: string[] = [],
     public defaultSeparate: boolean = true,
@@ -28,7 +28,7 @@ export class DataCollectionContainer {
     public paramIds: Set<string> = new Set(),
   ) {
     this.preprocessors = preprocessors;
-    this.textSign = textSign;
+    this.toText = toText;
     this.separators = separators;
     this.filterOut = filterOut;
     this.defaultSeparate = defaultSeparate;
@@ -46,7 +46,7 @@ export class DataCollectionContainer {
       for (let [key, value] of cacheMap.get("preprocessors") || {}) {
         this.preprocessors.set(key, value);
       }
-      this.textSign = cacheMap.get("textSign") || this.textSign;
+      this.toText = cacheMap.get("toText") || this.toText;
       this.filterOut.push(...(cacheMap.get("filterOut") || []));
     }
   }
@@ -54,12 +54,12 @@ export class DataCollectionContainer {
   static config(
     name: string,
     preprocessors: Map<string, (_:any)=>any> = new Map(),
-    textSign: string = "text",
+    toText: (unit: any) => string | null = (unit: any) => {return typeof unit === "string" ? unit : null},
     separators: string[] = [" "],
   ) {
     let cacheMap = cache.get(name) || new Map();
     cacheMap.set("preprocessors", preprocessors);
-    cacheMap.set("textSign", textSign);
+    cacheMap.set("toText", toText);
     cacheMap.set("separators", separators);
     cache.set(name, cacheMap);
   }
@@ -79,7 +79,7 @@ export class DataCollectionContainer {
     return parseInt(hash.digest("hex"), 16);
   }
 
-  get origin(): DataCollection<any> {
+  get origin(): DC {
     return this.tempData.get("origin") || "None";
   }
 
@@ -87,10 +87,11 @@ export class DataCollectionContainer {
     return this.currentIndex >= this.nData;
   }
 
-  build(data: DataCollection<any>): this {
+  build(data: DC): this {
     this.reset();
     this.tempData.set("origin", data);
     if (typeof data === "string") {
+      //@ts-ignore
       data = [data]
     }
     let [i, err, raw] = [0, null, this.rawData];
@@ -106,7 +107,7 @@ export class DataCollectionContainer {
           unit = res
         }
       }
-      let text: string = typeof unit === "string" ? unit : (unit[this.textSign] || '')
+      let text: string = this.toText(unit) || ""
       if (text) {
         let res = text.trim()
         if (!res) {
@@ -208,7 +209,7 @@ export class DataCollectionContainer {
     return result
   }
 
-  dataSet() {
+  dataSet(): [any[], number] {
     return [Array.from(this.rawData), this.currentIndex]
   }
 
@@ -217,4 +218,3 @@ export class DataCollectionContainer {
     this.currentIndex = index
   }
 }
-
