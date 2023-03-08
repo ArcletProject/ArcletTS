@@ -124,7 +124,7 @@ export class Command<T extends Analyser = Analyser, TD extends DataCollection = 
       namespace = config.setdefault(namespace, new Namespace(namespace));
     }
     let _args = args instanceof Args ? args : new Args(...args);
-    super("ALCONNA:", _args, options, null, action, separators);
+    super("ALCONNA::", _args, options, null, action, separators);
     this.headers = headers || Array.from(namespace.headers);
     this.command = name || (this.headers.length > 0 ? "" : "Alconna");
     this.namespace = namespace.name;
@@ -149,7 +149,7 @@ export class Command<T extends Analyser = Analyser, TD extends DataCollection = 
     this._behaviors = behaviors || [];
     this._behaviors.splice(0, 0, new ActionHandler(this));
     this.formatter = new (formatterType || namespace.formatterType || TextFormatter)();
-    this.name = `${this.command || this.headers[0]}`.replace(/ALCONNA:/g, "");
+    this.name = `${this.command || this.headers[0]}`.replace(/ALCONNA::/g, "");
     manager.register(this);
     this.union = new Set();
   }
