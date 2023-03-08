@@ -8,7 +8,6 @@ import { TextFormatter } from "./formatter";
 import { ParseResult, Behavior } from "./result";
 import { Analyser, TADC } from "./analyser";
 
-import * as path from "path";
 import { PauseTriggered } from "./errors";
 
 class ActionHandler extends Behavior {
@@ -43,7 +42,7 @@ class ActionHandler extends Behavior {
       let d = result.query(key, undefined)
       if (d !== undefined) {
         let [end, value] = execData(d, action, source._meta.throwError);
-        this.update(result, `${path}.${end}`, value);
+        this.update(result, `${key}.${end}`, value);
       }
     }
   }

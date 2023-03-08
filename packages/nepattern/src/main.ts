@@ -2,7 +2,7 @@ import { Pattern, MatchMode } from "./core";
 import { AllParam, Empty, isConstructor } from "./utils";
 import { Regex, Switch, Union } from "./base";
 import { globalPatterns, allPatterns } from "./context";
-import * as fs from "node:fs"
+import * as fs from "fs"
 
 export const ANY: Pattern<any> = new Pattern(
   Object, ".+", MatchMode.KEEP, null, "any"

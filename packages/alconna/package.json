@@ -1,12 +1,13 @@
 {
   "name": "@arcletjs/alconna",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A High-performance, Generality, Humane Command Line Arguments Parser Library.",
   "main": "lib/index.cjs",
   "module": "lib/index.mjs",
   "typings": "lib/index.d.ts",
   "files": [
-    "lib"
+    "lib",
+    "lang"
   ],
   "author": "RF-Tar-Railt <rf_tar_railt@qq.com>",
   "license": "MIT",
@@ -35,6 +36,6 @@
     "build": "yarn compile:cjs && yarn compile:esm && dtsc"
   },
   "dependencies": {
-    "@arcletjs/nepattern": "1.0.0"
+    "@arcletjs/nepattern": "1.0.1"
   }
 }

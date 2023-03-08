@@ -1,4 +1,3 @@
-import {isPromise} from "node:util/types";
 import {Args, Arg} from "./args";
 import { InvalidParam } from "./errors";
 import {config} from "./config";
@@ -40,7 +39,7 @@ export class Action {
     }
     try {
       let out = this.fn(...vars);
-      if (isPromise(out)) {
+      if (out instanceof Promise) {
         out = out.then((x) => x);
       }
       if (!out || !(out instanceof Object)) {
