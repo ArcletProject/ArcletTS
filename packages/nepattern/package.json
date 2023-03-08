@@ -1,6 +1,6 @@
 {
   "name": "@arcletjs/nepattern",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Not-Enough-Pattern",
   "main": "lib/index.cjs",
   "module": "lib/index.mjs",
@@ -30,7 +30,5 @@
     "compile:esm": "esbuild src/index.ts --outfile=lib/index.mjs --bundle --platform=node --target=esnext",
     "build": "yarn compile:cjs && yarn compile:esm && dtsc"
   },
-  "dependencies": {
-    "@types/node": "^18.11.18"
-  }
+  "dependencies": {}
 }

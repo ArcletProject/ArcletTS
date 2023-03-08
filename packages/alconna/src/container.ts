@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import * as crypt from "crypto-browserify";
 import { Arg } from "./args";
 import { Option, Subcommand } from "./base";
 import { config } from "./config";
@@ -74,7 +74,7 @@ export class DataCollectionContainer<DC extends DataCollection<any> = DataCollec
   generateToken(data: (any|string[])[]): number {
     // calculate hashcode of stringfy data using createHash
     let stringData = JSON.stringify(data);
-    let hash = createHash("sha256");
+    let hash = crypt.createHash("sha256");
     hash.update(stringData, "utf8");
     return parseInt(hash.digest("hex"), 16);
   }

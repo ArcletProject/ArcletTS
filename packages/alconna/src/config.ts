@@ -1,4 +1,3 @@
-import * as fs from "fs";
 import { Constructor } from "@arcletjs/nepattern";
 import { THeader } from "./typing";
 
@@ -46,7 +45,7 @@ export class Namespace {
 
 
 class Lang {
-  public path = `${__dirname}/../lang/default.json`;
+  public path = `../lang/default.json`;
   private readonly file: object;
   private config: { [key: string]: string };
 
@@ -86,7 +85,7 @@ class Lang {
     if (type != "$default" && !this.types.includes(type)) {
       this.config = this.file[type];
       this.file["$default"] = type;
-      fs.writeFileSync(this.path, JSON.stringify(this.file, null, 2));
+      //fs.writeFileSync(this.path, JSON.stringify(this.file, null, 2));
       return undefined;
     }
     throw new Error(this.replaceKeys("lang.type_error", {target: type}));

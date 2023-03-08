@@ -2,7 +2,6 @@ import { Pattern, MatchMode } from "./core";
 import { AllParam, Empty, isConstructor } from "./utils";
 import { Regex, Switch, Union } from "./base";
 import { globalPatterns, allPatterns } from "./context";
-import * as fs from "fs"
 
 export const ANY: Pattern<any> = new Pattern(
   Object, ".+", MatchMode.KEEP, null, "any"
@@ -85,19 +84,6 @@ globalPatterns().update(
   }
 )
 
-
-export const FILE: Pattern<Buffer, fs.PathLike> = new Pattern(
-  Buffer,
-  "",
-  MatchMode.TYPE_CONVERT,
-  (_, x: fs.PathLike) => {
-    return fs.existsSync(x) ? fs.readFileSync(x) : null
-  },
-  "file",
-  null,
-  ["String", "Buffer", "URL"]
-)
-
 export const INTEGER: Pattern<number> = new Pattern(
   Number,
   "\-?[0-9]+",
@@ -138,7 +124,7 @@ export const DICT: Pattern<object> = new Pattern(
   "dict"
 )
 
-globalPatterns().adds([FILE, STRING, INTEGER, NUMBER, BOOL, ARRAY, DICT])
+globalPatterns().adds([STRING, INTEGER, NUMBER, BOOL, ARRAY, DICT])
 
 
 export function parser(item: any): Pattern<any> {
