@@ -9,20 +9,17 @@
 | Alconna | [![python](https://img.shields.io/pypi/v/arclet-alconna.svg)](https://pypi.org/project/arclet-alconna/) |]]
 | NEpattern | [![python](https://img.shields.io/pypi/v/nepattern.svg)](https://pypi.org/project/nepattern/) |]]
 
-| 描述   | 内容                                                                            |
-|------|-------------------------------------------------------------------------------|
-| 计划体重 |                                                                               |
-| 计划周期 |                                                                               |
-| 饮食计划 | 每日摄入主食如玉米、红薯、全麦面包、糙米饭等以及低热量、高纤维的蔬菜和水果。可以搭配含蛋白质的食物如瘦肉、豆类或鸡蛋。控制每日总热量摄入不超过1200千卡 |
-|   运动计划   | 建议进行一些有氧运动如快走、游泳、跳绳等，每周至少进行3次，每次30-60分钟。可以在此基础上加入力量训练，增加身体代谢率、改善身材线条。            |
-|   记录和监测   |  每周记录体重变化和腰围尺寸，并记录每日的饮食和运动情况。                                                                             |
+## example
 
-注意事项:
+```typescript
+import { Command, Args, Option} from "@arcletjs/alconna";
 
-1. 保持足够的睡眠：缺乏睡眠会导致身体代谢率下降，增加食欲和抵抗力下降等问题。建议每天保证7-8小时的充足睡眠。
+let cmd = new Command("npm", ["/"])
+.option("list")
+.subcommand("install", Args.push("pakName", String), [Option("-S|--save")])
 
-2. 饮水量要足够：饮水可以促进新陈代谢，帮助减肥。建议每天至少喝八杯水。
-
-3. 避免过度饥饿：长期过度饥饿会导致身体代谢率下降，反而不利于减肥。建议制定合理的饮食计划，保证营养均衡，适量进食。
-
-4. 坚持并耐心等待：减肥是一个长期的过程，需要坚持不懈，并且要有耐心。不要着急看到立竿见影的效果，只要持续努力，最终会看到明显的成果。
+let result = cmd.parse("/npm install tsc --save")
+console.log(result.query("install"))
+// Output as follows:
+// value=null args={"pakName":["tsc"]} options={"save":{"value":Ellipsis,"args":{}}} subcommands={}
+```
