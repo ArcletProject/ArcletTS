@@ -12,7 +12,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ArcletProject/ArcletTS.git",
+    "url": "https://github.com/ArcletProject/ArcletTS.git",
     "directory": "packages/alconna"
   },
   "bugs": {
@@ -35,6 +35,6 @@
     "build": "yarn compile:cjs && yarn compile:esm && dtsc"
   },
   "dependencies": {
-    "@arcletjs/nepattern" : ">=1.0.0"
+    "@arcletjs/nepattern": "1.0.0"
   }
 }

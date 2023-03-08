@@ -62,7 +62,7 @@ type TraceHead = {
   header: any[];
   description: string;
   usage: string | null;
-  examples: string[] | null;
+  examples: string[];
 }
 
 class Trace {
@@ -181,7 +181,7 @@ export class TextFormatter {
           }
         }
         return new Trace(
-          {name: _parts.at(-1)!, header: [], description: _parts.at(-1)!, usage: null, examples: null},
+          {name: _parts.at(-1)!, header: [], description: _parts.at(-1)!, usage: null, examples: []},
           new Args(),
           trace.separators,
           _opts
@@ -190,14 +190,14 @@ export class TextFormatter {
     }
     if (_cache instanceof Option) {
       return new Trace(
-        {name: _cache.name, header: [], description: _cache.helpText, usage: null, examples: null},
+        {name: _cache.name, header: [], description: _cache.helpText, usage: null, examples: []},
         _cache.args,
         _cache.separators, []
       )
     }
     if (_cache instanceof Subcommand) {
       return new Trace(
-        {name: _cache.name, header: [], description: _cache.helpText, usage: null, examples: null},
+        {name: _cache.name, header: [], description: _cache.helpText, usage: null, examples: []},
         _cache.args,
         _cache.separators,
         _cache._options
@@ -261,7 +261,7 @@ export class TextFormatter {
   header(root: TraceHead, seps: string[]): [string, string, string] {
     let help_string = root.description ? `\n${root.description}` : "";
     let usage_string = root.usage ? `\n用法:\n${root.usage}` : "";
-    let example_string = root.examples ? `\n使用示例:\n  ` + root.examples.join("\n  ") : "";
+    let example_string = root.examples.length > 0 ? `\n使用示例:\n  ` + root.examples.join("\n  ") : "";
     let header_string = root.header.length > 0 ? `[${root.header.map((v) => String(v)).join("")}]` : "";
     let cmd = `${header_string}${root.name || ""}`;
     let command_string = cmd || `${root.name}${seps[0]}`;

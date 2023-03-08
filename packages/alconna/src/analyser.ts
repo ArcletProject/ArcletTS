@@ -10,7 +10,7 @@ import { DataCollection } from "./typing";
 import { config, Namespace } from "./config";
 import { outputManager } from "./output";
 import { DataCollectionContainer } from "./container";
-import { analyseArgs, analyseParam, analyseHeader, handleHelp, handleShortcut } from "./handlers";
+import { analyseArgs, analyseParam, analyseHeader, handleHelp, handleShortcut, handleCompletion } from "./handlers";
 
 function compileOpts(option: Option, data: Map<string, Sentence|Option[]|SubAnalyser<any>>) {
   for (let alias of option.aliases) {
@@ -104,7 +104,7 @@ export class SubAnalyser<TC extends DataCollectionContainer = DataCollectionCont
       this.special.set(key, handleHelp);
     }
     for (let key of namespace.optionName.completion) {
-      //this.special.set(key, handleCompletion);
+      this.special.set(key, handleCompletion);
     }
     for (let key of namespace.optionName.shortcut) {
       this.special.set(key, handleShortcut);
@@ -349,7 +349,9 @@ export class Analyser<TC extends DataCollectionContainer = DataCollectionContain
     let rest = this.container.release();
     let err: Error
     if (rest.length > 0) {
-      //TODO: handleCompletion
+      if (typeof rest.at(-1) == "string" && this.completionNames.includes(rest.at(-1)!)) {
+        return handleCompletion(this, rest.at(-2)!) as ParseResult<TD>;
+      }
       err = new ParamsUnmatched(config.lang.replaceKeys("analyser.param_unmatched", {target: this.container.popitem(null, false)[0]}))
     } else {
       err = new ArgumentMissing(config.lang.require("analyser.param_missing"))
@@ -380,7 +382,9 @@ export class Analyser<TC extends DataCollectionContainer = DataCollectionContain
         if (e instanceof ParamsUnmatched || e instanceof ArgumentMissing) {
           let rest = this.container.release();
           if (rest.length > 0 && typeof rest.at(-1) == "string") {
-            //TODO: handleCompletion
+            if (this.completionNames.includes(rest.at(-1)!)) {
+              return handleCompletion(this) as ParseResult<TD>;
+            }
             if (this.special.has(rest.at(-1))){
               return this.special.get(rest.at(-1))!(this)
             }

@@ -29,3 +29,4 @@ let alc1 = new Command(
   Args.push("foo", Number)
 ).option("bar", Args.push("baz", String))
 console.log(alc1.shortcut("TEST([0-9]+)(.+)", {args: ["{0}", "bar {1}"]}))
+alc.parse("echo --comp")

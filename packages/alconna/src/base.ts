@@ -180,7 +180,7 @@ export class Option extends CommandNode {
     let _name = name.split(" ").at(-1)!;
     if (_name.includes("|")) {
       let _aliases = _name.split("|");
-      _aliases = _aliases.sort((a, b) => b.length - a.length).reverse();
+      _aliases = _aliases.sort((a, b) => b.length - a.length);
       name = name.replace(_name, _aliases[0]);
       _name = _aliases[0];
       aliases.push(..._aliases.slice(1));

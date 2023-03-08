@@ -461,5 +461,108 @@ export function handleShortcut(analyser: Analyser) {
   return analyser.export()
 }
 
+function handleUnit(analyser: Analyser, trigger: Arg<any>) {
+  let gen = trigger.field.completion;
+  if (gen) {
+    let comp = gen();
+    if (typeof comp == "string") {
+      return outputManager.send(analyser.command.name, () => <string>comp)
+    }
+    let target = `${analyser.container.release(null, true).at(-2)}`
+    let includes = comp.filter((v) => v.includes(target))
+    let out = (includes.length > 0 ? includes : comp).join("\n* ")
+    return outputManager.send(
+      analyser.command.name,
+      () => `${config.lang.require("common.completion_arg")}\n* ${out}`
+    )
+  }
+  let defaultVal = trigger.field.default;
+  let out = `[${trigger.name}]${String(trigger.value)}${defaultVal ? ` default:(${defaultVal == Empty ? null : defaultVal})` : ""}`
+  return outputManager.send(analyser.command.name, () => `${config.lang.require("common.completion_arg")}\n${out}`)
+}
+
+function handleSentence(analyser: Analyser) {
+  let res: string[] = []
+  for (let opt of analyser.command._options.filter(
+    (v) => v.requires.length >= analyser.sentences.length && v.requires[analyser.sentences.length - 1] == analyser.sentences.at(-1)
+  )) {
+    if (opt.requires.length > analyser.sentences.length) {
+      res.push(opt.requires[analyser.sentences.length])
+    } else {
+      res.push(...(opt instanceof Option ? opt.aliases : [opt.name]))
+    }
+  }
+  return res;
+}
+
+function handleNone(ana: Analyser, got: string[]) {
+  let res: string[] = []
+  if (ana.argsResult.size < 1 && ana.selfArgs.length > 0) {
+    let unit = ana.selfArgs.argument.at(0)!
+    let gen = unit.field.completion;
+    if (gen) {
+      let comp = gen();
+      res.push(comp instanceof Array ? comp.join("\n* ") : comp)
+    } else {
+      let defaultVal = unit.field.default;
+      res.push(`[${unit.name}]${String(unit.value)}${defaultVal ? ` default:(${defaultVal == Empty ? null : defaultVal})` : ""}`)
+    }
+  }
+  for (let opt of ana.command._options.filter((v) => !ana.completionNames.includes(v.name))) {
+    if (opt.requires.length > 0 && got.every((v) => !opt.requires[0].includes(v))) {
+      res.push(opt.requires[0])
+    } else if (!got.includes(opt._dest)) {
+      res.push(...(opt instanceof Option ? opt.aliases : [opt.name]))
+    }
+  }
+  return res;
+}
+
+export function handleCompletion(analyser: Analyser, trigger: string | null = null) {
+  let trig = trigger || analyser.container.context;
+  let got = [...analyser.optionResults.keys()]
+  got.push(...analyser.subcommandResults.keys())
+  got.push(...analyser.sentences)
+  if (trig instanceof Arg) {
+    handleUnit(analyser, trig)
+  } else if (trig instanceof Subcommand) {
+    outputManager.send(
+      analyser.command.name,
+      () => `${config.lang.require("common.completion_node")}\n* ` +
+        [...analyser.getSubAnalyser(trig as Subcommand)!.compileParams.keys()].join("\n* ")
+    )
+  } else if (typeof trig == "string") {
+    let res: string[] = [...analyser.compileParams.keys()].filter((v) => v.includes(trig as string))
+    if (res.length == 0) {
+      return analyser.export(
+        new ParamsUnmatched(config.lang.replaceKeys("analyser.param_unmatched", {target: trig})),
+        true
+      )
+    }
+    let out = res.filter((v) => !got.includes(v))
+    outputManager.send(
+      analyser.command.name,
+      () => `${config.lang.require("common.completion_node")}\n* ` + (out.length > 0 ? out : res).join("\n* ")
+    )
+  } else {
+    let target = `${analyser.container.release(null, true).at(-1)}`
+    let res = [...analyser.compileParams.keys()].filter((v) => v.includes(target) && v != target)
+    if (res.length > 0) {
+      let out = res.filter((v) => !got.includes(v))
+      outputManager.send(
+        analyser.command.name,
+        () => `${config.lang.require("common.completion_node")}\n* ` + (out.length > 0 ? out : res).join("\n* ")
+      )
+    } else {
+      let _res = analyser.sentences.length > 0 ? handleSentence(analyser) : handleNone(analyser, got)
+      outputManager.send(
+        analyser.command.name,
+        () => `${config.lang.require("common.completion_node")}\n* ` + [...(new Set(_res)).keys()].join("\n* ")
+      )
+    }
+  }
+  return analyser.export(new Error("completion"), true)
+}
+
 import { DataCollectionContainer } from "./container";
 import {SubAnalyser, Analyser} from "./analyser";

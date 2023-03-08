@@ -1,5 +1,5 @@
-import {Command, Args} from "@arcletjs/alconna";
-import { ANY, Pattern } from "@arcletjs/nepattern";
+import {Command, Args} from "alconna";
+import { ANY, Pattern } from "nepattern";
 
 class At {
   constructor(

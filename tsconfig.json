@@ -6,8 +6,8 @@
       "nepattern": [
         "packages/nepattern/src"
       ],
-      "arclet": [
-        "packages/arclet/src"
+      "alconna": [
+        "packages/alconna/src"
       ],
       "@arcletjs/*": [
         "packages/*/src"
